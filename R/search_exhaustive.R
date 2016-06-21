@@ -11,16 +11,37 @@
 #' @param grpnames  The group names (specified because the table can have other
 #'                  columns as well).
 #'
+#' @param minpergrp The minimum number of subjects to be preserved per group.
+#'
 #' @return A data.table with the same format as grpsizes, containing all
 #' possible group setups totaling to one less than the total in grpsizes.
-decrease_group_sizes <- function(grpsizes, grpnames) {
-    d <- rbindlist(lapply(grpnames, function(col) {
+#'
+#' @import data.table
+.decrease_group_sizes <- function(grpsizes, grpnames, minpergrp) {
+    # Table for all distribution of group sizes for one less than previous total.
+    d <- data.table::rbindlist(lapply(grpnames, function(col) {
         dg <- data.table::copy(grpsizes)
         dg[, col := get(col) - 1, with = FALSE]
-        dg <- dg[eval(as.name(col)) > 0]
+        dg <- dg[eval(as.name(col)) >= minpergrp[[col]]]
     }))
     data.table::setkeyv(d, grpnames)
     unique(d)
+}
+
+
+#' Orders rows by similarity to expected group size proportions.
+#'
+#' @inheritParams .decrease_group_sizes
+#' @inheritParams match_groups
+#'
+#' @import data.table
+.sort_group_sizes <- function(grpsizes, grpnames, props) {
+    divergence <- NULL  # to suppress codetools warnings
+    grpsizes[, divergence := vapply(seq_len(nrow(.SD)), function(row)
+        .calc_subject_balance_divergence(.SD[row,], props), 0.0),
+        .SDcols = grpnames]
+    data.table::setorder(grpsizes, divergence)
+    grpsizes
 }
 
 
@@ -36,167 +57,226 @@ decrease_group_sizes <- function(grpsizes, grpnames) {
 #' @param sspace        elements to be used (a list of vectors)
 #'
 #' @return A function that returns list of values, and stops with
-#'   "StopIteration" message when finished, so that it can be used with the
-#'   iterators::iter() function to create an iterator that works with foreach.
-create_Cartesian_iterable <- function(initializers, get_next, sspace) {
-    stopifnot(length(initializers) == length(sspace))
-    values <- NULL
-    iterators <- sapply(initializers, function(fn) fn(), simplify = FALSE)
-    function() {
-        if (is.null(values)) {
-            values <<- lapply(seq_along(iterators), function(pos)
-                sspace[[pos]][get_next(iterators[[pos]])])
-        } else {
-            pos <- length(iterators)
-            repeat {
-                index <- get_next(iterators[[pos]])
-                if (!is.null(index)) {
-                    values[[pos]] <<- sspace[[pos]][index]
-                    inc(pos) <- 1
-                    if (pos > length(iterators))
-                        break
-                } else {
-                    iterators[[pos]] <<- initializers[[pos]]()
-                    dec(pos) <- 1
-                    if (!pos) {
-                        values <<- NULL
-                        stop("StopIteration")
+#'        "StopIteration" message when finished, so that it can be used with
+#'        the iterators::iter() function to create an iterator that works with
+#'        foreach.
+.create_Cartesian_iterable <-
+    function(initializers, get_next, sspace) {
+        values <- NULL
+        iterators <-
+            sapply(initializers, function(fn)
+                fn(), simplify = FALSE)
+        function() {
+            if (is.null(values)) {
+                values <<- lapply(seq_along(iterators), function(pos)
+                    sspace[[pos]][get_next(iterators[[pos]])])
+            } else {
+                pos <- length(iterators)
+                repeat {
+                    index <- get_next(iterators[[pos]])
+                    if (!is.null(index)) {
+                        values[[pos]] <<- sspace[[pos]][index]
+                        inc(pos) <- 1
+                        if (pos > length(iterators))
+                            break
+                    } else {
+                        iterators[[pos]] <<- initializers[[pos]]()
+                        dec(pos) <- 1
+                        if (!pos) {
+                            values <<- NULL
+                            stop("StopIteration")
+                        }
                     }
                 }
             }
+            values
         }
-        values
     }
-}
-
-
-#' Combines matched group candidate with current best one.
-#'
-#' @param candidate  A list containing ratio (a number) and ind (a vector).
-#'
-#' @inheritParams check_subspaces_for_group_size_setup
-#'
-#' @return A structure like best containing the ind vectors with the highest
-#' ratio.
-combine_ratios <- function(best, candidate) {
-    if (candidate$ratio && candidate$ratio >= best$ratio) {
-        if (candidate$ratio > best$ratio) {
-            best$ratio <- candidate$ratio
-            best$inds <- list()
-        }
-        best$inds <- c(best$inds, list(candidate$ind))
-    }
-    best
-}
 
 
 #' Searches over all possible subspaces for specified group size setup.
 #'
+#' Results are optimized for the following, in decreasing order of preference:
+#' number of subjects; proportion of group sizes close to props;
+#' p-value as large as possible.
+#'
 #' @param best       The best matched groups so far together with its
-#'                   p-value / thresh ratio; a list containing ratio and inds
+#'                   p-value / thresh ratio; a list containing ratio and sets
 #'                   (a list of subject index vectors).
 #'
 #' @param grpsize_setup  A set of group sizes as a data.table row (also a list).
 #'
-#' @inheritParams ldamatch
+#' @param sspace  An ordered subject subspace: a list of vectors,
+#' with one vector per group containing the corresponding subject indices.
+#'
+#' @inheritParams match_groups
 #'
 #' @inheritParams search_exhaustive
 #'
-#' @return The best
+#' @return A list of logical vectors for the best matched groups.
 #'
+#' @import data.table
+#' @import foreach
+#' @import gmp
 #' @importFrom iterators iter
-check_subspaces_for_group_size_setup <- function(
-        best, grpsize_setup, sspace, condition, covariates, halting_test, thresh,
-        print_info) {
-    ci <- create_Cartesian_iterable(
-        sapply(names(sspace), function(cond) {
-            function() iterpc::iterpc(
-                length(sspace[[cond]]), grpsize_setup[[cond]])
-        }, simplify = FALSE), iterpc::getnext, sspace)
+#' @importFrom iterpc iterpc getnext
+.check_subspaces_for_group_size_setup <- function(best,
+                                                  grpsize_setup,
+                                                  sspace,
+                                                  condition,
+                                                  covariates,
+                                                  halting_test,
+                                                  thresh,
+                                                  print_info) {
+    nz <-
+        sapply(names(sspace), function(cond)
+            grpsize_setup[[cond]] != 0)
+    sspace <- sspace[nz]
+    grpsize_setup <- grpsize_setup[, names(nz), with = FALSE]
+    ci <- .create_Cartesian_iterable(sapply(names(sspace), function(cond) {
+        function()
+            iterpc::iterpc(length(sspace[[cond]]), grpsize_setup[[cond]])
+    }, simplify = FALSE),
+    iterpc::getnext,
+    sspace)
     if (print_info) {
-        Cartesian_size <- prod(vapply(
-            get("iterators", environment(ci)), iterpc::getlength, 0))
-        cat("Size of Cartesian product:", Cartesian_size, "\n")
+        Cartesian_size <- do.call(prod, lapply(
+            get("iterators", environment(ci)),
+            iterpc::getlength,
+            bigz = TRUE
+        ))
+        cat("Size of Cartesian product:",
+            as.character(Cartesian_size),
+            "\n")
         start_time <- proc.time()
     }
     # calculate halting test values for batch
-    values <- NULL  # just to eliminate the "NOTE" given by R CMD check
+    values <-
+        NULL  # just to eliminate the "NOTE" given by R CMD check
     best <- foreach::foreach(
-            values = iterators::iter(ci),
-            .combine = combine_ratios, .init = best, .inorder = FALSE) %dopar% {
+        values = iterators::iter(ci),
+        .combine = .combine_sets,
+        .init = best,
+        .inorder = FALSE
+    ) %dopar% {
         ind <- unlist(values)
-        ratio <- halting_test(condition[ind], covariates[ind, , drop = FALSE], thresh)
-        list(ratio = ratio, ind = ind)
+        ratio <-
+            halting_test(condition[ind], covariates[ind, , drop = FALSE], thresh)
+        list(metric = ratio, set = ind)
     }
     if (print_info) {
         elapsed_time <- (proc.time() - start_time)[['elapsed']]
-        cat("Number of cases processed per second:",
-            Cartesian_size / elapsed_time, "\n")
+        cat(
+            "Number of cases processed per second:",
+            as.double(Cartesian_size / elapsed_time),
+            "\n"
+        )
     }
     best
 }
 
 
-#' Searches the space backwards, prefering more subjects and better ratios.
+#' Searches the space backwards, prefering more subjects and certain group size
+#' proportions.
+#'
+#' @details
 #' While the search is done in parallel, the search space is enormous and so
 #' it can be very slow in the worst case. It is perhaps most useful as a tool
 #' to study other matching procedures.
 #'
-#' @param sspace  An ordered subject subspace: a list of vectors,
-#' with one vector per group containing the corresponding subject indices.
+#' You can calculate the maximum possible number of cases to evaluate by
+#' calling estimate_exhaustive().
 #'
-#' @inheritParams ldamatch
+#' @param max_removed   The maximum number of subjects that can be removed from
+#'                      each group. It must have a valid number for each group.
 #'
-#' @return A list of logical vector(s) for best set(s) of subjects to be kept.
+#' @inheritParams match_groups
+#' @inheritParams .warn_about_extra_params
+#'
+#' @return All results found by search method in a list. It raises a
+#'         "Convergence failure" error if it cannot find a matched set.
 #'
 #' @import data.table
 #' @import foreach
-#' @importFrom entropy KL.plugin
-#' @importFrom iterpc iterpc
-search_exhaustive <- function(sspace, condition, covariates,
-                              halting_test, thresh, props,
-                              print_info) {
+search_exhaustive <- function(condition,
+                              covariates,
+                              halting_test,
+                              thresh,
+                              props,
+                              max_removed,
+                              tiebreaker = NULL,
+                              min_preserved = NULL,
+                              print_info = TRUE,
+                              ...) {
+    .warn_about_extra_params(...)
+    if (is.null(min_preserved))
+        min_preserved <- length(levels(condition))
     # Finds best p-value / threshold ratio and the corresponding subsets:
     # iterates over all group sizes, by decreasing groups with original size.
-    best <- list(ratio = 0, inds = list())
+    sspace <- split(seq_along(condition), condition)
+    max_removed <- max_removed[names(sspace)]
+    best <- list(metric = 0, sets = list())
     grpsizes <- data.table::data.table(t(vapply(sspace, length, 0)))
+    minpergrp <- vapply(sspace, length, 0) - max_removed
     grpnames <- names(sspace)
-    while (!best$ratio) {
-        grpsizes <- decrease_group_sizes(grpsizes, grpnames)
+    while (!best$metric) {
+        grpsizes <- .decrease_group_sizes(grpsizes, grpnames, minpergrp)
         if (nrow(grpsizes) == 0)
             break
+        total_size <- sum(grpsizes[1, grpnames, with = FALSE])
+        if (total_size < min_preserved)
+            stop("No subspace found with at least specified minimum total number preserved")
         if (print_info)
-            cat("Created", nrow(grpsizes), "group size configurations",
+            cat(
+                "Created",
+                nrow(grpsizes),
+                "group size configurations",
                 "each with a total size of",
-                sum(grpsizes[1, grpnames, with = FALSE]), "\n")
-        # Orders rows by similarity to ratio in props.
-        grpsizes[
-            , KL_diverg := vapply(seq_len(nrow(.SD)), function(row)
-                entropy::KL.plugin(prop.table(.SD[row, ]), props), 0.0),
-            .SDcols = grpnames]
-        data.table::setorder(grpsizes, KL_diverg)
-        # Goes over rows of table with group sizes and
-        # finds best suitable subsets, comparing those for group sizes with the
-        # same KL divergence only.
+                total_size,
+                "\n"
+            )
+        grpsizes <- .sort_group_sizes(grpsizes, grpnames, props)
+        # Goes over rows of table with group sizes and finds best suitable
+        # subsets, comparing those for group sizes with the same KL divergence
+        # only.
         grpsizes_row <- 1
         repeat {
-            KL_diverg <- grpsizes[grpsizes_row, KL_diverg]
+            divergence <- grpsizes[grpsizes_row, divergence]
             repeat {
                 if (print_info)
                     cat(paste(names(grpsizes), grpsizes[grpsizes_row], sep = ": "), "\n")
-                best <- check_subspaces_for_group_size_setup(
-                    best, grpsizes[grpsizes_row, ], sspace, condition, covariates,
-                    halting_test, thresh, print_info)
+                best <- .check_subspaces_for_group_size_setup(
+                    best,
+                    grpsizes[grpsizes_row,],
+                    sspace,
+                    condition,
+                    covariates,
+                    halting_test,
+                    thresh,
+                    print_info
+                )
                 inc(grpsizes_row) <- 1
                 if (grpsizes_row > nrow(grpsizes) ||
-                        grpsizes[grpsizes_row, KL_diverg] != KL_diverg)
+                    grpsizes[grpsizes_row, divergence] != divergence)
                     break
             }
-            if (best$ratio || grpsizes_row > nrow(grpsizes))
+            if (best$metric || grpsizes_row > nrow(grpsizes))
                 break
         }
     }
-    if (!best$ratio)
+    if (!best$metric)
         stop("No subspace found for specified threshold")
-    lapply(best$inds, function(ind) seq_along(condition) %in% ind)
+    if (is.function(tiebreaker)) {
+        best_of_best <- Reduce(function(best, ind) {
+            candidate <- list(
+                metric = .calc_p_thresh_ratio(condition[ind], covariates[ind, , drop = FALSE], tiebreaker, 1),
+                set = ind
+            )
+            .combine_sets(best, candidate)
+        }, best$sets, init = list(metric = -Inf, sets = list()))
+        if (length(best_of_best) > 0)
+            best <- best_of_best
+    }
+    lapply(best$sets, function(ind)
+        seq_along(condition) %in% ind)
 }

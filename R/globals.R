@@ -1,8 +1,8 @@
 ## Globals
 .ldamatch_globals <- new.env(parent = emptyenv())
 
-## Default number of replicates for Monte Carlo search.
-assign("MC_DEFAULT_REPLICATES", 1e4, .ldamatch_globals)
+## Default number of replicates for random search.
+assign("RND_DEFAULT_REPLICATES", 1e4, .ldamatch_globals)
 
 ## Anderson-Darling test parameters; see kSamples::ad.test.
 ## AD_VERSION: 1 or 2 for the two versions of the AD test statistic
@@ -22,13 +22,13 @@ assign("PRINT_INFO", TRUE, .ldamatch_globals)
 #' @param name   The name of the global parameter.
 #' @return The value of the global parameter.
 #'
-#' @import RUnit
+#' @importFrom RUnit checkTrue
 #'
 #' @export
 get_param <- function(name) {
     RUnit::checkTrue(
         name %in% ls(.ldamatch_globals),
-        paste0("unknown global parameter name ", name, "; chose one of ",
+        paste0("Unknown global parameter name ", name, "; chose one of ",
                paste(ls(.ldamatch_globals), collapse = ", ")))
     get(name, .ldamatch_globals)
 }
@@ -42,7 +42,7 @@ get_param <- function(name) {
 #'
 #' @details The names of the available parameters:
 #' \itemize{
-#'   \item{MC_DEFAULT_REPLICATES}{: Monte Carlo search: default number of replicates}
+#'   \item{RND_DEFAULT_REPLICATES}{: random search: default number of replicates}
 #'   \item{Anderson-Darling test parameters; see kSamples::ad.test for explanation}{
 #'     \itemize{
 #'       \item{AD_METHOD}{: the method parameter for ad.test; default: asymptotic}
@@ -54,11 +54,13 @@ get_param <- function(name) {
 #'     the exhaustive search algorithm}
 #' }
 #'
+#' @importFrom RUnit checkTrue
+#'
 #' @export
 set_param <- function(name, value) {
     RUnit::checkTrue(
         name %in% ls(.ldamatch_globals),
-        paste0("unknown global parameter name ", name, "; chose one of ",
+        paste0("Unknown global parameter name ", name, "; chose one of ",
                paste(ls(.ldamatch_globals), collapse = ", ")))
     prev_value <- get(name, .ldamatch_globals)
     assign(name, value, .ldamatch_globals)
