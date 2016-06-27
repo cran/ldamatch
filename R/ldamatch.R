@@ -27,13 +27,13 @@ NULL
 .create_subject_subspace_using_LDA <-
     function(condition, covariates) {
         ## Computes linear projection vector, after removing constant columns.
-        covariates <- covariates[, apply(covariates, 2, var, na.rm = TRUE) != 0, drop = FALSE]
+        covariates <- covariates[, apply(covariates, 2, stats::var, na.rm = TRUE) != 0, drop = FALSE]
         if (ncol(covariates) == 0) {
             stop("No non-constant variables in covariates")
         } else if (ncol(covariates) == 1) {
             W <- 1  # just uses the identity projection.
         } else {
-            W <- coef(MASS::lda(condition ~ covariates))[, 1]
+            W <- stats::coef(MASS::lda(condition ~ covariates))[, 1]
         }
         projection <- as.vector(covariates %*% W)
         ## Set up search space.
@@ -83,7 +83,7 @@ NULL
         RUnit::checkTrue(all(table(props) == 1),
                          "Each condition name can only be listed once in props")
         if (length(props) == length(levels(condition)))
-            props <- head(props,-1)
+            props <- utils::head(props, -1)
         props <- table(condition)[props]
     } else {
         stop(
@@ -133,7 +133,14 @@ NULL
 #'
 #' @param halting_test  A function to apply to `covariates` (in matrix form)
 #'                      which is TRUE iff the conditions are matched.
-#'                      Signature: halting_test(condition, covariates, thresh)
+#'                      Signature: halting_test(condition, covariates, thresh).
+#'                      The following halting tests are part of this package:
+#'                      \code{\link{t_halt}}, \code{\link{U_halt}},
+#'                      \code{\link{l_halt}}, \code{\link{ad_halt}},
+#'                      \code{\link{ks_halt}}, \code{\link{wilks_halt}},
+#'                      \code{\link{f_halt}}.
+#'                      You can create the intersection of two or more halting
+#'                      tests using \code{\link{create_halting_test}}.
 #'
 #' @param thresh        The return value of halting_test has to be greater than
 #'                      or equal to thresh for the matched groups.
@@ -145,7 +152,7 @@ NULL
 #'                      order.
 #'                      You can get more information about each method on the
 #'                      help page for "search_<method_name>"
-#'                      (e.g. "search_exhaustive").
+#'                      (e.g. "\code{\link{search_exhaustive}}").
 #'
 #' @param props         Either the desired proportions (percentage) of the
 #'                      sample for each condition as a named vector,
@@ -159,7 +166,7 @@ NULL
 #'                      taken into account by the other methods to some extent.
 #'                      For example, c(A = 0.4, B = 0.4, C = 0.2) means that
 #'                      we would like the number of subjects in groups A, B, and
-#'                      C to be around 40%, 40%, and 20% of the total number of
+#'                      C to be around 40\%, 40\%, and 20\% of the total number of
 #'                      subjects, respectively. Whereas c("A", "B", "C") means
 #'                      that if possible, we would like to keep all subjects
 #'                      in group A, and prefer keeping subjects in B, even if
@@ -172,7 +179,8 @@ NULL
 #' @param print_info    If TRUE, prints summary information on the input and the
 #'                      results, as well as progress information for the
 #'                      exhaustive search and random algorithms. Default: TRUE;
-#'                      can be changed using set_param("PRINT_INFO", FALSE).
+#'                      can be changed using
+#'                      \code{\link{set_param}("PRINT_INFO", FALSE)}.
 #'
 #' @param min_preserved The minimum number of preserved subjects.
 #'                      It can be used to ensure that the search will not take
@@ -205,6 +213,13 @@ NULL
 #' @return              A logical vector that contains TRUE for the conditions
 #'                      that are in the matched groups;
 #'                      or if all_results = TRUE, a list of such vectors.
+#'
+#' @seealso \code{\link{calc_p_value}} for calculating the test statistic for
+#' a group setup.
+#' @seealso \code{\link{calc_metrics}} for calculating multiple metrics about
+#' the goodness of the result.
+#' @seealso \code{\link{compare_ldamatch_outputs}} for comparing multiple
+#' different results from this function.
 #'
 #' @export
 match_groups <-

@@ -38,7 +38,7 @@
 .sort_group_sizes <- function(grpsizes, grpnames, props) {
     divergence <- NULL  # to suppress codetools warnings
     grpsizes[, divergence := vapply(seq_len(nrow(.SD)), function(row)
-        .calc_subject_balance_divergence(.SD[row,], props), 0.0),
+        .calc_subject_balance_divergence(.SD[row, ], props), 0.0),
         .SDcols = grpnames]
     data.table::setorder(grpsizes, divergence)
     grpsizes
@@ -247,7 +247,7 @@ search_exhaustive <- function(condition,
                     cat(paste(names(grpsizes), grpsizes[grpsizes_row], sep = ": "), "\n")
                 best <- .check_subspaces_for_group_size_setup(
                     best,
-                    grpsizes[grpsizes_row,],
+                    grpsizes[grpsizes_row, ],
                     sspace,
                     condition,
                     covariates,

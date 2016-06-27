@@ -12,7 +12,7 @@
 
 <meta name="author" content="Kyle Gorman &amp; Géza Kiss" />
 
-<meta name="date" content="2016-06-15" />
+<meta name="date" content="2016-06-23" />
 
 <title>ldamatch demos</title>
 
@@ -70,7 +70,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 
 <h1 class="title toc-ignore">ldamatch demos</h1>
 <h4 class="author"><em>Kyle Gorman &amp; Géza Kiss</em></h4>
-<h4 class="date"><em>2016-06-15</em></h4>
+<h4 class="date"><em>2016-06-23</em></h4>
 
 
 
@@ -88,7 +88,7 @@ covariate1 &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">is.in &lt;-<span class="st"> </span><span class="kw">match_groups</span>(condition, covariate1, t_halt)</code></pre></div>
 <pre><code>## Initial group sizes:  control: 30    treatment: 15 
 ## Starting heuristic1 search.
-## Finished heuristic1 search in 0.07 seconds.
+## Finished heuristic1 search in 0.222 seconds.
 ## Eventual group sizes: control: 28    treatment: 14 
 ## Removed subjects:     control: 2 treatment: 1</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">print</span>(<span class="kw">table</span>(condition, is.in))</code></pre></div>
@@ -109,7 +109,7 @@ covariate1 &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="
 ## Found matching: control: 30; treatment: 13 (total: 43)
 ## Found matching: control: 30; treatment: 13 (total: 43)
 ## Found matching: control: 30; treatment: 13 (total: 43)
-## Finished random search in 26.128 seconds.
+## Finished random search in 21.058 seconds.
 ## Eventual group sizes: control: 30    treatment: 13 
 ## Removed subjects:     control: 0 treatment: 2</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">print</span>(<span class="kw">table</span>(condition, is.in))</code></pre></div>
@@ -123,7 +123,7 @@ covariate1 &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">is.in &lt;-<span class="st"> </span><span class="kw">match_groups</span>(condition, covariate1, t_halt, <span class="dt">method =</span> <span class="st">&quot;heuristic2&quot;</span>)</code></pre></div>
 <pre><code>## Initial group sizes:  control: 30    treatment: 15 
 ## Starting heuristic2 search.
-## Finished heuristic2 search in 0.155 seconds.
+## Finished heuristic2 search in 0.259 seconds.
 ## Eventual group sizes: control: 30    treatment: 13 
 ## Removed subjects:     control: 0 treatment: 2</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">print</span>(<span class="kw">table</span>(condition, is.in))</code></pre></div>
@@ -142,7 +142,7 @@ covariates &lt;-<span class="st"> </span><span class="kw">cbind</span>(covariate
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">is.in &lt;-<span class="st"> </span><span class="kw">match_groups</span>(condition, covariates, t_halt)</code></pre></div>
 <pre><code>## Initial group sizes:  control: 30    treatment: 15 
 ## Starting heuristic1 search.
-## Finished heuristic1 search in 0.013 seconds.
+## Finished heuristic1 search in 0.083 seconds.
 ## Eventual group sizes: control: 27    treatment: 14 
 ## Removed subjects:     control: 3 treatment: 1</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">print</span>(<span class="kw">table</span>(condition, is.in))</code></pre></div>
@@ -156,7 +156,7 @@ covariates &lt;-<span class="st"> </span><span class="kw">cbind</span>(covariate
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">is.in &lt;-<span class="st"> </span><span class="kw">match_groups</span>(condition, covariates, t_halt, <span class="dt">method =</span> <span class="st">&quot;heuristic2&quot;</span>)</code></pre></div>
 <pre><code>## Initial group sizes:  control: 30    treatment: 15 
 ## Starting heuristic2 search.
-## Finished heuristic2 search in 0.254 seconds.
+## Finished heuristic2 search in 0.42 seconds.
 ## Eventual group sizes: control: 30    treatment: 13 
 ## Removed subjects:     control: 0 treatment: 2</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">print</span>(<span class="kw">table</span>(condition, is.in))</code></pre></div>
@@ -176,7 +176,7 @@ covariates &lt;-<span class="st"> </span><span class="kw">cbind</span>(covariate
 ## Found matching: control: 30; treatment: 13 (total: 43)
 ## Found matching: control: 30; treatment: 13 (total: 43)
 ## Found matching: control: 30; treatment: 13 (total: 43)
-## Finished random search in 13.158 seconds.
+## Finished random search in 15.804 seconds.
 ## Eventual group sizes: control: 30    treatment: 13 
 ## Removed subjects:     control: 0 treatment: 2</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">print</span>(<span class="kw">table</span>(condition, is.in))</code></pre></div>
@@ -191,7 +191,7 @@ covariates &lt;-<span class="st"> </span><span class="kw">cbind</span>(covariate
 is.in &lt;-<span class="st"> </span><span class="kw">match_groups</span>(condition, covariates, U_halt, <span class="dt">props =</span> my.props)</code></pre></div>
 <pre><code>## Initial group sizes:  control: 30    treatment: 15 
 ## Starting heuristic1 search.
-## Finished heuristic1 search in 0.054 seconds.
+## Finished heuristic1 search in 0.061 seconds.
 ## Eventual group sizes: control: 18    treatment: 13 
 ## Removed subjects:     control: 12    treatment: 2</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">print</span>(<span class="kw">table</span>(condition, is.in))</code></pre></div>
@@ -205,7 +205,7 @@ is.in &lt;-<span class="st"> </span><span class="kw">match_groups</span>(conditi
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">is.in &lt;-<span class="st"> </span><span class="kw">match_groups</span>(condition, covariates, wilks_halt)</code></pre></div>
 <pre><code>## Initial group sizes:  control: 30    treatment: 15 
 ## Starting heuristic1 search.
-## Finished heuristic1 search in 0.014 seconds.
+## Finished heuristic1 search in 0.029 seconds.
 ## Eventual group sizes: control: 27    treatment: 14 
 ## Removed subjects:     control: 3 treatment: 1</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">print</span>(<span class="kw">table</span>(condition, is.in))</code></pre></div>
@@ -226,7 +226,7 @@ is.in &lt;-<span class="st"> </span><span class="kw">match_groups</span>(conditi
 ## Found matching: control: 30; treatment: 13 (total: 43)
 ## Found matching: control: 30; treatment: 13 (total: 43)
 ## Found matching: control: 30; treatment: 13 (total: 43)
-## Finished random search in 20.218 seconds.
+## Finished random search in 25.535 seconds.
 ## Eventual group sizes: control: 30    treatment: 13 
 ## Removed subjects:     control: 0 treatment: 2</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">print</span>(<span class="kw">table</span>(condition, is.in))</code></pre></div>
@@ -240,7 +240,7 @@ is.in &lt;-<span class="st"> </span><span class="kw">match_groups</span>(conditi
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">is.in &lt;-<span class="st"> </span><span class="kw">match_groups</span>(condition, covariates, t_halt, <span class="dt">method =</span> <span class="st">&quot;heuristic1&quot;</span>)</code></pre></div>
 <pre><code>## Initial group sizes:  control: 30    treatment: 15 
 ## Starting heuristic1 search.
-## Finished heuristic1 search in 0.015 seconds.
+## Finished heuristic1 search in 0.016 seconds.
 ## Eventual group sizes: control: 27    treatment: 14 
 ## Removed subjects:     control: 3 treatment: 1</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">print</span>(<span class="kw">table</span>(condition, is.in))</code></pre></div>
@@ -256,7 +256,7 @@ threshes &lt;-<span class="st"> </span><span class="kw">c</span>(.<span class="d
 is.in &lt;-<span class="st"> </span><span class="kw">match_groups</span>(condition, covariates, t_ad_halt, threshes)</code></pre></div>
 <pre><code>## Initial group sizes:  control: 30    treatment: 15 
 ## Starting heuristic1 search.
-## Finished heuristic1 search in 0.41 seconds.
+## Finished heuristic1 search in 0.579 seconds.
 ## Eventual group sizes: control: 25    treatment: 12 
 ## Removed subjects:     control: 5 treatment: 3</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">print</span>(<span class="kw">table</span>(condition, is.in))</code></pre></div>
@@ -277,23 +277,23 @@ is.ins &lt;-<span class="st"> </span><span class="kw">match_groups</span>(condit
 <pre><code>## Initial group sizes:  control: 30    treatment: 15 
 ## Starting exhaustive search.
 ## Created 2 group size configurations each with a total size of 44 
-## control: 29 treatment: 15 divergence: 0.000128651338541341 
+## control: 29 treatment: 15 divergence: 0.000128651338541343 
 ## Size of Cartesian product: 30 
-## Number of cases processed per second: 232.5581 
-## control: 30 treatment: 14 divergence: 0.000520578560755857 
+## Number of cases processed per second: 189.8734 
+## control: 30 treatment: 14 divergence: 0.000520578560755861 
 ## Size of Cartesian product: 15 
-## Number of cases processed per second: 283.0189 
+## Number of cases processed per second: 312.5 
 ## Created 3 group size configurations each with a total size of 43 
-## control: 29 treatment: 14 divergence: 0.000135741532290408 
+## control: 29 treatment: 14 divergence: 0.000135741532290407 
 ## Size of Cartesian product: 450 
-## Number of cases processed per second: 381.6794 
-## control: 28 treatment: 15 divergence: 0.000536783341068093 
+## Number of cases processed per second: 332.5942 
+## control: 28 treatment: 15 divergence: 0.000536783341068091 
 ## Size of Cartesian product: 435 
-## Number of cases processed per second: 352.7981 
-## control: 30 treatment: 13 divergence: 0.00219932832492591 
+## Number of cases processed per second: 314.7612 
+## control: 30 treatment: 13 divergence: 0.0021993283249259 
 ## Size of Cartesian product: 105 
-## Number of cases processed per second: 351.1706 
-## Finished exhaustive search in 2.948 seconds.
+## Number of cases processed per second: 333.3333 
+## Finished exhaustive search in 3.328 seconds.
 ## Eventual group sizes: control: 30    treatment: 13 
 ## Removed subjects:     control: 0 treatment: 2</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">print</span>(<span class="kw">table</span>(condition, is.ins[[<span class="dv">1</span>]]))</code></pre></div>
@@ -327,7 +327,7 @@ covariates &lt;-<span class="st"> </span><span class="kw">cbind</span>(covariate
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">is.in &lt;-<span class="st"> </span><span class="kw">match_groups</span>(condition, covariates, t_ad_halt, <span class="dt">method =</span> <span class="st">&quot;heuristic1&quot;</span>)</code></pre></div>
 <pre><code>## Initial group sizes:  group1: 15 group2: 15  group3: 15 
 ## Starting heuristic1 search.
-## Finished heuristic1 search in 0.171 seconds.
+## Finished heuristic1 search in 0.215 seconds.
 ## Eventual group sizes: group1: 11 group2: 11  group3: 12 
 ## Removed subjects:     group1: 4  group2: 4   group3: 3</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">print</span>(<span class="kw">table</span>(condition, is.in))</code></pre></div>

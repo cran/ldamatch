@@ -19,7 +19,14 @@ covariates to match the conditions on.}
 
 \item{halting_test}{A function to apply to `covariates` (in matrix form)
 which is TRUE iff the conditions are matched.
-Signature: halting_test(condition, covariates, thresh)}
+Signature: halting_test(condition, covariates, thresh).
+The following halting tests are part of this package:
+\code{\link{t_halt}}, \code{\link{U_halt}},
+\code{\link{l_halt}}, \code{\link{ad_halt}},
+\code{\link{ks_halt}}, \code{\link{wilks_halt}},
+\code{\link{f_halt}}.
+You can create the intersection of two or more halting
+tests using \code{\link{create_halting_test}}.}
 
 \item{thresh}{The return value of halting_test has to be greater than
 or equal to thresh for the matched groups.}
@@ -31,7 +38,7 @@ The running time increases approximately in the above
 order.
 You can get more information about each method on the
 help page for "search_<method_name>"
-(e.g. "search_exhaustive").}
+(e.g. "\code{\link{search_exhaustive}}").}
 
 \item{props}{Either the desired proportions (percentage) of the
 sample for each condition as a named vector,
@@ -45,7 +52,7 @@ total subjects by the "exhaustive" method, and
 taken into account by the other methods to some extent.
 For example, c(A = 0.4, B = 0.4, C = 0.2) means that
 we would like the number of subjects in groups A, B, and
-C to be around 40%, 40%, and 20% of the total number of
+C to be around 40\%, 40\%, and 20\% of the total number of
 subjects, respectively. Whereas c("A", "B", "C") means
 that if possible, we would like to keep all subjects
 in group A, and prefer keeping subjects in B, even if
@@ -63,7 +70,8 @@ found when preserving this number of subjects.}
 \item{print_info}{If TRUE, prints summary information on the input and the
 results, as well as progress information for the
 exhaustive search and random algorithms. Default: TRUE;
-can be changed using set_param("PRINT_INFO", FALSE).}
+can be changed using
+\code{\link{set_param}("PRINT_INFO", FALSE)}.}
 
 \item{max_removed}{A named integer vector, containing the maximum number
 of subjects that can be removed from each group.
@@ -104,5 +112,15 @@ For example, to use all but one of the CPU cores, run:
   \code{doMC::registerDoMC(max(1, parallel::detectCores() - 1))}
 To use sequential processing without getting a warning, run:
   \code{foreach::registerDoSEQ()}
+}
+\seealso{
+\code{\link{calc_p_value}} for calculating the test statistic for
+a group setup.
+
+\code{\link{calc_metrics}} for calculating multiple metrics about
+the goodness of the result.
+
+\code{\link{compare_ldamatch_outputs}} for comparing multiple
+different results from this function.
 }
 

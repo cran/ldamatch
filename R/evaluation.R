@@ -4,6 +4,8 @@
 #' better balance (i.e. subsamples that diverge less from the expected
 #' proportions, which are by default the proportions of the input groups), and
 #' better (i.e. larger) test statistic for the matched groups.
+#' The preference order for the last two items can be reversed by specifying
+#' prefer_test = TRUE.
 #'
 #' @param is.in1        A logical vector for output 1, TRUE iff row is in the match.
 #'
@@ -55,7 +57,7 @@ compare_ldamatch_outputs <- function(is.in1,
     num_excluded2 <- sum(!is.in2)
     if (num_excluded1 != num_excluded2)
         return(num_excluded2 - num_excluded1)
-    for (test_stat in c(prefer_test,!prefer_test)) {
+    for (test_stat in c(prefer_test, !prefer_test)) {
         # compare test statistic
         if (test_stat && is.function(halting_test)) {
             p_matched1 <- calc_p_value(condition[is.in1], covariates[is.in1, , drop = FALSE], halting_test)
@@ -84,12 +86,13 @@ compare_ldamatch_outputs <- function(is.in1,
 
 #' Calculates basic metrics about ldamatch search result.
 #'
-#' @param is.in        The output of match_groups(): either a logical vector,
-#'                     or a list of those.
+#' @param is.in        The output of \code{\link{match_groups}()}:
+#'                     either a logical vector, or a list of those.
 #'
 #' @return A list containing: \describe{
 #' \item{all.is.in}{all results as a list;}
-#' \item{is.in}{simply the first item in all.is.in or the error contained in is.in;}
+#' \item{is.in}{simply the first item in all.is.in or the error contained
+#' in is.in if there was an error running \code{\link{match_groups}};}
 #' \item{num_excluded}{the number of excluded subjects), p_matched
 #'    (the test statistic from halting_test for the matched groups);}
 #' \item{p_tiebreaker}{the test statistic from tiebreaker for the matched groups; and}

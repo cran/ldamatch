@@ -54,6 +54,9 @@ get_param <- function(name) {
 #'     the exhaustive search algorithm}
 #' }
 #'
+#' @seealso \code{\link{get_param}} for retrieving the current value of a
+#' parameter.
+#'
 #' @importFrom RUnit checkTrue
 #'
 #' @export

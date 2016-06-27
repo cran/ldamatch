@@ -70,7 +70,7 @@ search_random <- function(condition,
         if (!best_num)
             pos <- i
         nrs <-
-            rbinom(length(sspace), rcounts, multipliers * pos / end)
+            stats::rbinom(length(sspace), rcounts, multipliers * pos / end)
         nrs <- pmin(nrs, max_removed)
         is.in <- rep(TRUE, length(condition))
         mapply(function(s, nr, len)

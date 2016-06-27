@@ -8,8 +8,8 @@ calc_metrics(is.in, condition, covariates, halting_test,
   props = prop.table(table(condition)), tiebreaker = NULL)
 }
 \arguments{
-\item{is.in}{The output of match_groups(): either a logical vector,
-or a list of those.}
+\item{is.in}{The output of \code{\link{match_groups}()}:
+either a logical vector, or a list of those.}
 
 \item{condition}{A factor vector containing condition labels.}
 
@@ -18,7 +18,14 @@ covariates to match the conditions on.}
 
 \item{halting_test}{A function to apply to `covariates` (in matrix form)
 which is TRUE iff the conditions are matched.
-Signature: halting_test(condition, covariates, thresh)}
+Signature: halting_test(condition, covariates, thresh).
+The following halting tests are part of this package:
+\code{\link{t_halt}}, \code{\link{U_halt}},
+\code{\link{l_halt}}, \code{\link{ad_halt}},
+\code{\link{ks_halt}}, \code{\link{wilks_halt}},
+\code{\link{f_halt}}.
+You can create the intersection of two or more halting
+tests using \code{\link{create_halting_test}}.}
 
 \item{props}{Either the desired proportions (percentage) of the
 sample for each condition as a named vector,
@@ -32,7 +39,7 @@ total subjects by the "exhaustive" method, and
 taken into account by the other methods to some extent.
 For example, c(A = 0.4, B = 0.4, C = 0.2) means that
 we would like the number of subjects in groups A, B, and
-C to be around 40%, 40%, and 20% of the total number of
+C to be around 40\%, 40\%, and 20\% of the total number of
 subjects, respectively. Whereas c("A", "B", "C") means
 that if possible, we would like to keep all subjects
 in group A, and prefer keeping subjects in B, even if
@@ -45,7 +52,8 @@ equal values.}
 \value{
 A list containing: \describe{
 \item{all.is.in}{all results as a list;}
-\item{is.in}{simply the first item in all.is.in or the error contained in is.in;}
+\item{is.in}{simply the first item in all.is.in or the error contained
+in is.in if there was an error running \code{\link{match_groups}};}
 \item{num_excluded}{the number of excluded subjects), p_matched
    (the test statistic from halting_test for the matched groups);}
 \item{p_tiebreaker}{the test statistic from tiebreaker for the matched groups; and}

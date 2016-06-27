@@ -24,7 +24,7 @@
                                  thresh,
                                  silent = TRUE) {
     ratio <-
-        try(-halting_test(condition, covariates,-thresh), silent = silent)
+        try(-halting_test(condition, covariates, -thresh), silent = silent)
     if (class(ratio) == "try-error")
         ratio <- NA
     ratio

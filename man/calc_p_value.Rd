@@ -14,7 +14,14 @@ covariates to match the conditions on.}
 
 \item{halting_test}{A function to apply to `covariates` (in matrix form)
 which is TRUE iff the conditions are matched.
-Signature: halting_test(condition, covariates, thresh)}
+Signature: halting_test(condition, covariates, thresh).
+The following halting tests are part of this package:
+\code{\link{t_halt}}, \code{\link{U_halt}},
+\code{\link{l_halt}}, \code{\link{ad_halt}},
+\code{\link{ks_halt}}, \code{\link{wilks_halt}},
+\code{\link{f_halt}}.
+You can create the intersection of two or more halting
+tests using \code{\link{create_halting_test}}.}
 }
 \value{
 The p-value.

@@ -20,7 +20,14 @@ covariates to match the conditions on.}
 
 \item{halting_test}{A function to apply to `covariates` (in matrix form)
 which is TRUE iff the conditions are matched.
-Signature: halting_test(condition, covariates, thresh)}
+Signature: halting_test(condition, covariates, thresh).
+The following halting tests are part of this package:
+\code{\link{t_halt}}, \code{\link{U_halt}},
+\code{\link{l_halt}}, \code{\link{ad_halt}},
+\code{\link{ks_halt}}, \code{\link{wilks_halt}},
+\code{\link{f_halt}}.
+You can create the intersection of two or more halting
+tests using \code{\link{create_halting_test}}.}
 
 \item{props}{Either the desired proportions (percentage) of the
 sample for each condition as a named vector,
@@ -34,7 +41,7 @@ total subjects by the "exhaustive" method, and
 taken into account by the other methods to some extent.
 For example, c(A = 0.4, B = 0.4, C = 0.2) means that
 we would like the number of subjects in groups A, B, and
-C to be around 40%, 40%, and 20% of the total number of
+C to be around 40\%, 40\%, and 20\% of the total number of
 subjects, respectively. Whereas c("A", "B", "C") means
 that if possible, we would like to keep all subjects
 in group A, and prefer keeping subjects in B, even if
@@ -58,5 +65,7 @@ It favors, in decreasing order of priority, fewer excluded subjects,
 better balance (i.e. subsamples that diverge less from the expected
 proportions, which are by default the proportions of the input groups), and
 better (i.e. larger) test statistic for the matched groups.
+The preference order for the last two items can be reversed by specifying
+prefer_test = TRUE.
 }
 

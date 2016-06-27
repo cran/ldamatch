@@ -32,4 +32,8 @@ The names of the available parameters:
     the exhaustive search algorithm}
 }
 }
+\seealso{
+\code{\link{get_param}} for retrieving the current value of a
+parameter.
+}
 

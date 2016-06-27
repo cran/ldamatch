@@ -217,7 +217,7 @@ search_heuristic3 <- function(condition,
                                which(is.in != set), simplify = FALSE)
             parent_inds <- .unique_list(unlist(
                 sapply(inds, function(ind)
-                    combn(ind, step_look, simplify = FALSE),
+                    utils::combn(ind, step_look, simplify = FALSE),
                     simplify = FALSE),
                 recursive = FALSE
             ))  # unique list items

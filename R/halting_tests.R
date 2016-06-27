@@ -6,7 +6,8 @@
 #' @inheritParams match_groups
 #'
 #' @return The ratio of the p-value and the threshold, or 0 if the p-value is
-#'         less than the threshold.
+#'         less than the threshold. If there are more than two conditions,
+#'         it returns the smallest value found for any condition pair.
 #'
 #' @export
 t_halt <- function(condition, covariates, thresh) {
@@ -33,7 +34,8 @@ t_halt <- function(condition, covariates, thresh) {
 #' @inheritParams match_groups
 #'
 #' @return The ratio of the p-value and the threshold, or 0 if the p-value is
-#'         less than the threshold.
+#'         less than the threshold. If there are more than two conditions,
+#'         it returns the smallest value found for any condition pair.
 #'
 #' @export
 U_halt <- function(condition, covariates, thresh) {
@@ -126,7 +128,8 @@ ad_halt <- function(condition, covariates, thresh) {
 #' @inheritParams match_groups
 #'
 #' @return The ratio of the p-value and the threshold, or 0 if the p-value is
-#'         less than the threshold.
+#'         less than the threshold. If there are more than two conditions,
+#'         it returns the smallest value found for any condition pair.
 #'
 #' @importFrom RUnit checkEquals
 #'
@@ -157,9 +160,11 @@ ks_halt <- function(condition, covariates, thresh) {
 #' @return The ratio of the p-value and the threshold, or 0 if the p-value is
 #'         less than the threshold.
 #'
+#' @importFrom stats manova
+#'
 #' @export
 wilks_halt <- function(condition, covariates, thresh) {
-    p <- min(summary(manova(covariates ~ droplevels(condition)),
+    p <- min(summary(stats::manova(covariates ~ droplevels(condition)),
                      test = "Wilks")$stats[1, 6])
     if (p < thresh)
         return(0.0)
@@ -280,7 +285,7 @@ create_halting_test <- function(halting_tests) {
                     "Only the parameters with the following names can be",
                     " given for halting tests:",
                     " 'test' (can be unnamed if first in list),",
-                    "'cond', 'cov', and 'thresh'"
+                    " 'cond', 'cov', and 'thresh'"
                 )
             )
             # make sure test is the first one and named
@@ -309,7 +314,7 @@ create_halting_test <- function(halting_tests) {
                 class(h$cov) %in% c("NULL", "logical", "integer", "numeric"),
                 paste0(
                     "The variable selector for the halting test",
-                    "(specified in 'cov') must be either a logical vector,",
+                    " (specified in 'cov') must be either a logical vector,",
                     " or a vector of integers"
                 )
             )
@@ -382,8 +387,6 @@ create_halting_test <- function(halting_tests) {
 #'
 #' @return The ratio of the p-value and the threshold, or 0 if the p-value is
 #'         less than the threshold.
-#'
-#' @importFrom stats manova
 .apply_crit <- function(covariates, crit, condition, thresh) {
     min_p <- Inf
     condition <- droplevels(condition)
@@ -391,10 +394,7 @@ create_halting_test <- function(halting_tests) {
         p <- try(crit(covariates[, i], condition), silent = TRUE)
         if (class(p) == "try-error") {
             n_levels = length(levels(condition))
-            if (n_levels == 1 ||
-                grepl("not enough.*observations", p) ||
-                #temp for a kSamples::ad.test() error
-                grepl(".Fortran(C_bvalus, n = as.integer(n),", p)) {
+            if (n_levels == 1 || grepl("not enough.*observations", p)) {
                 return(0.0)  # problem is too few observations
             } else if (grepl("'x' and 'y' must have at least 2 levels", p) ||
                        grepl("data.*constant", p)) {
@@ -422,6 +422,7 @@ create_halting_test <- function(halting_tests) {
 #' @return The ratio of the p-value and the threshold, or 0 if the p-value is
 #'         less than the threshold.
 #'
+#' @importFrom utils combn
 .apply_crit_to_condition_pairs <-
     function(covariates, crit, condition, thresh) {
         condition <- droplevels(condition)
@@ -434,7 +435,7 @@ create_halting_test <- function(halting_tests) {
             choose_worse <- max
             worst_ratio <- -Inf
         }
-        for (condition_pair in combn(levels(condition), 2, simplify = FALSE)) {
+        for (condition_pair in utils::combn(levels(condition), 2, simplify = FALSE)) {
             b <- (condition %in% condition_pair)
             ratio <- .apply_crit(covariates[b, , drop = FALSE], crit,
                                  condition[b], thresh)

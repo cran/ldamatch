@@ -17,7 +17,8 @@ or equal to thresh for the matched groups.}
 }
 \value{
 The ratio of the p-value and the threshold, or 0 if the p-value is
-        less than the threshold.
+        less than the threshold. If there are more than two conditions,
+        it returns the smallest value found for any condition pair.
 }
 \description{
 The condition must have two levels.
