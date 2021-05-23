@@ -29,4 +29,3 @@ The p-value.
 \description{
 Calculates p-value using specified halting test.
 }
-

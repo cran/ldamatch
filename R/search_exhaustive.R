@@ -17,11 +17,13 @@
 #' possible group setups totaling to one less than the total in grpsizes.
 #'
 #' @import data.table
+#'
+#' @keywords internal
 .decrease_group_sizes <- function(grpsizes, grpnames, minpergrp) {
     # Table for all distribution of group sizes for one less than previous total.
     d <- data.table::rbindlist(lapply(grpnames, function(col) {
         dg <- data.table::copy(grpsizes)
-        dg[, col := get(col) - 1, with = FALSE]
+        dg[, (col) := get(col) - 1]
         dg <- dg[eval(as.name(col)) >= minpergrp[[col]]]
     }))
     data.table::setkeyv(d, grpnames)
@@ -35,10 +37,12 @@
 #' @inheritParams match_groups
 #'
 #' @import data.table
+#'
+#' @keywords internal
 .sort_group_sizes <- function(grpsizes, grpnames, props) {
     divergence <- NULL  # to suppress codetools warnings
     grpsizes[, divergence := vapply(seq_len(nrow(.SD)), function(row)
-        .calc_subject_balance_divergence(.SD[row, ], props), 0.0),
+        .calc_subject_balance_divergence(.SD[row,], props), 0.0),
         .SDcols = grpnames]
     data.table::setorder(grpsizes, divergence)
     grpsizes
@@ -60,6 +64,8 @@
 #'        "StopIteration" message when finished, so that it can be used with
 #'        the iterators::iter() function to create an iterator that works with
 #'        foreach.
+#'
+#' @keywords internal
 .create_Cartesian_iterable <-
     function(initializers, get_next, sspace) {
         values <- NULL
@@ -120,6 +126,8 @@
 #' @import gmp
 #' @importFrom iterators iter
 #' @importFrom iterpc iterpc getnext
+#'
+#' @keywords internal
 .check_subspaces_for_group_size_setup <- function(best,
                                                   grpsize_setup,
                                                   sspace,
@@ -133,12 +141,14 @@
             grpsize_setup[[cond]] != 0)
     sspace <- sspace[nz]
     grpsize_setup <- grpsize_setup[, names(nz), with = FALSE]
-    ci <- .create_Cartesian_iterable(sapply(names(sspace), function(cond) {
-        function()
-            iterpc::iterpc(length(sspace[[cond]]), grpsize_setup[[cond]])
-    }, simplify = FALSE),
-    iterpc::getnext,
-    sspace)
+    ci <-
+        .create_Cartesian_iterable(
+            sapply(names(sspace), function(cond)
+                function()
+                    iterpc::iterpc(length(sspace[[cond]]), grpsize_setup[[cond]]), simplify = FALSE),
+            iterpc::getnext,
+            sspace
+        )
     if (print_info) {
         Cartesian_size <- do.call(prod, lapply(
             get("iterators", environment(ci)),
@@ -148,29 +158,30 @@
         cat("Size of Cartesian product:",
             as.character(Cartesian_size),
             "\n")
-        start_time <- proc.time()
+        search_start_time <- proc.time()
     }
     # calculate halting test values for batch
-    values <-
-        NULL  # just to eliminate the "NOTE" given by R CMD check
-    best <- foreach::foreach(
-        values = iterators::iter(ci),
-        .combine = .combine_sets,
+    best <- .foreach(
+        input = iterators::iter(ci),
+        preprocess_input = unlist,
         .init = best,
-        .inorder = FALSE
-    ) %dopar% {
-        ind <- unlist(values)
-        ratio <-
-            halting_test(condition[ind], covariates[ind, , drop = FALSE], thresh)
-        list(metric = ratio, set = ind)
-    }
+        .combine = .combine_sets,
+        operation = function(ind) {
+            ratio <-
+                halting_test(condition[ind], covariates[ind, , drop = FALSE], thresh)
+            list(metric = ratio, set = ind)
+        }
+    )
     if (print_info) {
-        elapsed_time <- (proc.time() - start_time)[['elapsed']]
-        cat(
-            "Number of cases processed per second:",
-            as.double(Cartesian_size / elapsed_time),
-            "\n"
-        )
+        search_time <- (proc.time() - search_start_time)
+        cases_per_cpu_second = as.double(
+            Cartesian_size /
+                (search_time[["user.self"]] + search_time[["sys.self"]]))
+        cases_per_wall_clock_second = as.double(
+            Cartesian_size / (search_time[["elapsed"]]))
+        cat("Number of cases processed per second: ",
+            cases_per_cpu_second, " (cpu time) or ",
+            cases_per_wall_clock_second, " (wall clock time).\n", sep = '')
     }
     best
 }
@@ -187,7 +198,7 @@
 #' You can calculate the maximum possible number of cases to evaluate by
 #' calling estimate_exhaustive().
 #'
-#' @param max_removed   The maximum number of subjects that can be removed from
+#' @param max_removed_per_cond   The maximum number of subjects that can be removed from
 #'                      each group. It must have a valid number for each group.
 #'
 #' @inheritParams match_groups
@@ -203,24 +214,24 @@ search_exhaustive <- function(condition,
                               halting_test,
                               thresh,
                               props,
-                              max_removed,
+                              max_removed_per_cond,
                               tiebreaker = NULL,
-                              min_preserved = NULL,
+                              min_preserved = length(levels(condition)),
                               print_info = TRUE,
+                              given_args = NULL,
                               ...) {
-    .warn_about_extra_params(...)
-    if (is.null(min_preserved))
-        min_preserved <- length(levels(condition))
+    .warn_about_extra_params(given_args, ...)
     # Finds best p-value / threshold ratio and the corresponding subsets:
     # iterates over all group sizes, by decreasing groups with original size.
     sspace <- split(seq_along(condition), condition)
-    max_removed <- max_removed[names(sspace)]
-    best <- list(metric = 0, sets = list())
+    max_removed_per_cond <- max_removed_per_cond[names(sspace)]
+    best <- list(metric = -Inf, sets = list())
     grpsizes <- data.table::data.table(t(vapply(sspace, length, 0)))
-    minpergrp <- vapply(sspace, length, 0) - max_removed
+    minpergrp <- vapply(sspace, length, 0) - max_removed_per_cond
     grpnames <- names(sspace)
-    while (!best$metric) {
-        grpsizes <- .decrease_group_sizes(grpsizes, grpnames, minpergrp)
+    while (best$metric <= 0) {
+        grpsizes <-
+            .decrease_group_sizes(grpsizes, grpnames, minpergrp)
         if (nrow(grpsizes) == 0)
             break
         total_size <- sum(grpsizes[1, grpnames, with = FALSE])
@@ -247,7 +258,7 @@ search_exhaustive <- function(condition,
                     cat(paste(names(grpsizes), grpsizes[grpsizes_row], sep = ": "), "\n")
                 best <- .check_subspaces_for_group_size_setup(
                     best,
-                    grpsizes[grpsizes_row, ],
+                    grpsizes[grpsizes_row,],
                     sspace,
                     condition,
                     covariates,
@@ -260,11 +271,11 @@ search_exhaustive <- function(condition,
                     grpsizes[grpsizes_row, divergence] != divergence)
                     break
             }
-            if (best$metric || grpsizes_row > nrow(grpsizes))
+            if (best$metric > 0 || grpsizes_row > nrow(grpsizes))
                 break
         }
     }
-    if (!best$metric)
+    if (best$metric <= 0)
         stop("No subspace found for specified threshold")
     if (is.function(tiebreaker)) {
         best_of_best <- Reduce(function(best, ind) {

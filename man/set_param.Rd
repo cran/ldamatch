@@ -2,7 +2,7 @@
 % Please edit documentation in R/globals.R
 \name{set_param}
 \alias{set_param}
-\title{Sets parameters for ldamatch.}
+\title{Sets value for ldamatch global parameter.}
 \usage{
 set_param(name, value)
 }
@@ -15,7 +15,7 @@ set_param(name, value)
 The previous value of the global parameter.
 }
 \description{
-Sets parameters for ldamatch.
+Sets value for ldamatch global parameter.
 }
 \details{
 The names of the available parameters:
@@ -24,16 +24,17 @@ The names of the available parameters:
   \item{Anderson-Darling test parameters; see kSamples::ad.test for explanation}{
     \itemize{
       \item{AD_METHOD}{: the method parameter for ad.test; default: asymptotic}
-      \item{AD_NSIM}{: the Nsim parameter for ad.test; default: 10000}
+      \item{AD_NSIM}{: the Nsim parameter for ad.test, used when AD_METHOD is 'simulated'; default: 10000}
       \item{AD_VERSION}{: 1 or 2 for the two versions of the test statistic; default: 1}
     }
   }
   \item{PRINT_INFO}{: print summary information, and progress information for
     the exhaustive search algorithm}
+  \item{PRINT_PROGRESS}{: whether to print progress information about parallell processing of cases}
+  \item{PROCESSED_CHUNK_SIZE}{: the number of cases to be retrieved at a time from iterators for parallel processing}
 }
 }
 \seealso{
 \code{\link{get_param}} for retrieving the current value of a
 parameter.
 }
-

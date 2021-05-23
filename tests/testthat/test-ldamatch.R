@@ -7,18 +7,13 @@ context("ldamatch")
 set_param("PRINT_INFO", FALSE)
 set_param("RND_DEFAULT_REPLICATES", 10)
 
-# methods
-methods <- c(paste0("heuristic", 1:4), "random", "exhaustive")
-
 # halting tests to be used for numeric covariates
-halting_tests_for_numbers <- c(
-    sapply(c(
-        "t_halt", "U_halt", "l_halt", "ad_halt", "ks_halt", "wilks_halt"),
-        ldamatch:::.get_halting_test),
-    list(t_ad_halt = create_halting_test(list(t_halt, ad_halt))))
+halting_tests_for_numbers <- list(
+    U_halt = U_halt, l_halt = l_halt, ks_halt = ks_halt, wilks_halt = wilks_halt,
+    t_ad_halt = create_halting_test(list(t_halt, ad_halt)))
 
 # halting tests to be used for factor covariates
-halting_tests_for_factors <- "f_halt"  # halting tests
+halting_tests_for_factors <- list(f_halt = f_halt)  # halting tests
 
 
 # CREATE TEST DATA
@@ -81,49 +76,48 @@ test_ldamatch_with_DX_preferences <- function(
 }
 
 
-test_ldamatch_methods_and_halting_tests <- function(
-        condition, covariates, halting_tests = halting_tests_for_numbers) {
+test_ldamatch_methods <- function(
+        condition, covariates, halting_test = t_halt) {
     # test all methods
-    for (method in methods) {
-        # we must get output when print_info is TRUE, and not when FALSE
-        expect_output(match_groups(condition, covariates, method = method, t_halt,
-                                   print_info = TRUE),
-                      info = paste(method, "print info"))
-        expect_silent(match_groups(condition, covariates, method = method, t_halt,
-                                   print_info = FALSE))
-        # return first result
-        is.in = match_groups(condition, covariates, t_halt,
-                             method = method, all_results = FALSE)
+    for (method in matching_methods) {
+        # we must get output when print_info is TRUE; return first result
+        expect_output(
+            (is.in = match_groups(condition, covariates, halting_test, method = method,
+                                  print_info = TRUE, all_results = FALSE)),
+                      info = paste(method, "print info, not all results"))
         expect_is(is.in, "logical")
         expect_length(is.in, length(condition))
-        # return all results
-        is.in = match_groups(condition, covariates, t_halt,
-                             method = method, all_results = TRUE)
+        # we must not get output when print_info is FALSE; return all results
+        expect_silent(
+            (is.in = match_groups(condition, covariates, halting_test, method = method,
+                                  print_info = FALSE, all_results = TRUE)))
         expect_is(is.in, "list")
         expect_length(is.in[[1]], length(condition))
-        # test with all halting tests
-        for (halting_test_name in names(halting_tests)) {
-            halting_test = halting_tests[[halting_test_name]]
-            # test with different thresh values
-            expect_true(all(match_groups(condition, covariates, halting_test,
-                                         method = method, thresh = 0)),
-                        info = paste(method, halting_test_name, "thresh = 0"))
-            expect_error(match_groups(condition, covariates, halting_test,
-                                      method = method, thresh = 1 + 1e-10),
-                         info = paste(method, halting_test_name, "thresh = 1"))
-        }
+    }
+}
+
+
+test_ldamatch_halting_tests <- function(
+    condition, covariates, halting_tests = halting_tests_for_numbers,
+    method = "heuristic2") {
+    # test with all halting tests
+    expect_false(is.null(names(halting_tests)))
+    for (halting_test_name in names(halting_tests)) {
+        halting_test = halting_tests[[halting_test_name]]
+        # test with different thresh values
+        expect_true(all(match_groups(condition, covariates, halting_test,
+                                     method = method, thresh = 0)),
+                    info = paste(method, halting_test_name, "thresh = 0"))
+        expect_error(match_groups(condition, covariates, halting_test,
+                                  method = method, thresh = 1 + 1e-10),
+                     info = paste(method, halting_test_name, "thresh = 1"))
     }
 }
 
 
 # TESTS
 
-# set up multicore cluster
-if (suppressWarnings(require('doMC'))) {
-    doMC::registerDoMC(max(1, parallel::detectCores() - 1))
-} else {
-    foreach::registerDoSEQ()
-}
+foreach::registerDoSEQ()
 
 # univariate data
 
@@ -139,15 +133,23 @@ test_that("ldamatch works on univariate numeric data with DX preferences", {
     test_ldamatch_with_DX_preferences(condition, covariate)
 })
 
-test_that("ldamatch works on univariate numeric data with all methods and halting tests", {
-    test_ldamatch_methods_and_halting_tests(
+test_that("ldamatch works on univariate numeric data with all methods", {
+    test_ldamatch_methods(condition, covariate)
+})
+
+test_that("ldamatch works on univariate numeric data with all halting tests", {
+    test_ldamatch_halting_tests(
         condition, covariate, halting_tests_for_numbers[
             names(halting_tests_for_numbers) != "wilks_halt"])
 })
 
-test_that("ldamatch works on univariate factor data with all methods and halting tests", {
-    test_ldamatch_methods_and_halting_tests(condition, covariate_factor,
-                                            halting_tests_for_factors)
+test_that("ldamatch works on univariate factor data with all methods", {
+    test_ldamatch_methods(condition, covariate_factor)
+})
+
+test_that("ldamatch works on univariate factor data with all halting tests", {
+    test_ldamatch_halting_tests(condition, covariate_factor,
+                                halting_tests_for_factors)
 })
 
 
@@ -165,11 +167,20 @@ test_that("ldamatch works on multivariate numeric data with DX preferences", {
     test_ldamatch_with_DX_preferences(condition, covariates)
 })
 
-test_that("ldamatch works on multivariate numeric data with all methods and halting tests", {
-    test_ldamatch_methods_and_halting_tests(condition, covariates)
+test_that("ldamatch works on multivariate numeric data with all methods", {
+    test_ldamatch_methods(condition, covariates)
 })
 
-test_that("ldamatch works on multivariate factor data with all methods and halting tests", {
-    test_ldamatch_methods_and_halting_tests(condition, covariates_factor,
-                                            halting_tests_for_factors)
+test_that("ldamatch works on multivariate numeric data with all halting tests", {
+    test_ldamatch_halting_tests(condition, covariates,
+                                halting_tests_for_numbers)
+})
+
+test_that("ldamatch works on multivariate factor data with all methods", {
+    test_ldamatch_methods(condition, covariates_factor)
+})
+
+test_that("ldamatch works on multivariate factor data with all halting tests", {
+    test_ldamatch_halting_tests(condition, covariates_factor,
+                                halting_tests_for_factors)
 })

@@ -2,11 +2,21 @@
 % Please edit documentation in R/search_heuristic2.R
 \name{search_heuristic2}
 \alias{search_heuristic2}
-\title{Finds matching using depth-first search recursively.}
+\title{OBSOLETE: Finds matching using depth-first search recursively.}
 \usage{
-search_heuristic2(condition, covariates, halting_test, thresh, props,
-  max_removed, tiebreaker = NULL, prefer_test = TRUE, print_info = FALSE,
-  ...)
+search_heuristic2(
+  condition,
+  covariates,
+  halting_test,
+  thresh,
+  props,
+  max_removed_per_cond,
+  tiebreaker = NULL,
+  prefer_test = TRUE,
+  print_info = TRUE,
+  given_args = NULL,
+  ...
+)
 }
 \arguments{
 \item{condition}{A factor vector containing condition labels.}
@@ -34,9 +44,7 @@ or the names of the conditions
 for which we prefer to preserve the subjects,
 in decreasing order of preference. If not specified, the
 (full) sample proportions are used.
-This is enforced by the "heuristic1" method,
-preferred among configurations with the same number of
-total subjects by the "exhaustive" method, and
+This is preferred among configurations with the same
 taken into account by the other methods to some extent.
 For example, c(A = 0.4, B = 0.4, C = 0.2) means that
 we would like the number of subjects in groups A, B, and
@@ -46,7 +54,7 @@ that if possible, we would like to keep all subjects
 in group A, and prefer keeping subjects in B, even if
 it results in losing more subjects from C.}
 
-\item{max_removed}{The maximum number of subjects that can be removed from
+\item{max_removed_per_cond}{The maximum number of subjects that can be removed from
 each group. It must have a valid number for each group.}
 
 \item{tiebreaker}{NULL, or a function similar to halting_test, used to
@@ -54,13 +62,16 @@ decide between cases for which halting_test yields
 equal values.}
 
 \item{prefer_test}{If TRUE, prefers higher test statistic more than
-the group size proportion; default is TRUE.}
+the expected group size proportion; default is TRUE.
+Used by all algorithms except exhaustive, which always}
 
 \item{print_info}{If TRUE, prints summary information on the input and the
 results, as well as progress information for the
 exhaustive search and random algorithms. Default: TRUE;
 can be changed using
 \code{\link{set_param}("PRINT_INFO", FALSE)}.}
+
+\item{given_args}{The names of arguments given to the search function.}
 
 \item{...}{Consumes extra parameters that are not used by the
 search algorithm at hand; this function gives a warning
@@ -72,7 +83,14 @@ All results found by search method in a list. It raises a
         "Convergence failure" error if it cannot find a matched set.
 }
 \description{
+Please use the heuristic3 search algorithm with lookahead=1 instead
+for nearly equivalent results. Note that heuristic3 is parallelized,
+more memory efficient, and chooses subject to remove randomly from among
+equivalent choices instead of choosing the first one deterministically.
+This function is implemented recursively, so may run out of memory when
+applied to many subjects.
+}
+\details{
 In each step, it removes one subject from the set of subjects with
 the smallest p-value recursively.
 }
-

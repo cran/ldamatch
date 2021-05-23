@@ -6,29 +6,42 @@
 #'
 #' @return A string containing "<number> seconds/minutes/hours/days/years".
 #'
+#' @keywords internal
 .get_human_readable <- function(seconds, num_decimals = 1) {
     value <- seconds
     measurement <- "second"
     for (convert in list(
+        # multiplier from previous measurement; name [and possibly plural name]; max. decimals
         list(60, "minute"),
         list(60, "hour"),
         list(24, "day"),
         list(7, "week"),
         list(365 / (12 * 7), "month"),
-        list(12, "year")
+        list(12, "year"),
+        list(100, c("century", "centuries"), 0)
     )) {
-        if (round(value, num_decimals) >= convert[[1]]) {
+        num_decimals_for_value <-
+            min(num_decimals, if (length(convert) >= 3)
+                convert[[3]]
+                else
+                    NULL)
+        if (round(value, num_decimals_for_value) >= convert[[1]]) {
             value <- value / convert[[1]]
             measurement <- convert[[2]]
         } else {
             break
         }
     }
-    value <- round(value, num_decimals)
-    paste(value, if (value == 1)
-        measurement
+    rounded_value <- round(value, num_decimals_for_value)
+    paste(
+        rounded_value,
+        if (rounded_value == 1)
+            measurement[[1]]
+        else if (length(measurement) >= 2)
+            measurement[[2]]
         else
-            paste0(measurement, "s"))
+            paste0(measurement[[1]], "s")
+    )
 }
 
 
@@ -49,11 +62,19 @@
 #'                          matched solution for; min_preserved need not be
 #'                          specified if this one is.
 #'
-#' @param props             The desired proportions (percentage) of the sample
-#'                          for each condition; if this and group_sizes are both
-#'                          specified, the maximum number of cases to considered
-#'                          by the exhaustive search can be calculated more
-#'                          precisely.
+#' @param props             Either the desired proportions (percentage) of the
+#'                          sample for each condition as a named vector,
+#'                          or the names of the conditions
+#'                          for which we prefer to preserve the subjects,
+#'                          in decreasing order of preference. If not specified, the
+#'                          (full) sample proportions are used.
+#'
+#' @param max_cases         Once it is certain that the number of cases is
+#'                          definitely above this number, calculation stops. In this case,
+#'                          the returned number is guaranteed to be larger than max_cases,
+#'                          but it is not the exact number of exhaustive cases.
+#'                          Default is infimum, i.e. the exact number of cases is calculated.
+#'
 #'
 #' @inheritParams match_groups
 #'
@@ -75,28 +96,45 @@ estimate_exhaustive <-
              condition,
              cases_per_second = 100,
              print_info = TRUE,
-             max_removed = NULL,
+             max_removed_per_cond = NULL,
              group_sizes = NULL,
-             props = NULL) {
+             props = prop.table(table(condition)),
+             max_cases = Inf) {
         divergence <- NULL  # to suppress codetools warnings
         stopifnot(is.factor(condition), length(cases_per_second) == 1)
+        stopifnot(is.logical(print_info) && length(print_info) == 1)
+        if (!is.null(props))
+            props <- .normalize_props(props, condition, keep_last_item = TRUE)
+        condition_names <- intersect(levels(condition), unique(c(
+            as.character(condition),
+            names(max_removed_per_cond),
+            names(group_sizes[group_sizes != 0]),
+            names(props[props != 0.0])
+        )))
+        condition <- factor(as.character(condition),
+                    intersect(levels(condition), condition_names))
+        props <- props[condition_names]
         min_preserved <- max(min(min_preserved, length(condition)),
                              length(levels(condition)))
         sspace <- split(seq_along(condition), condition)
-        max_removed <- .normalize_max_removed(max_removed, condition)
-        minpergrp <- vapply(sspace, length, 0) - max_removed
+        max_removed_per_cond <-
+            .normalize_max_removed_per_cond(max_removed_per_cond, condition)
+        minpergrp <-
+            vapply(sspace, length, 0) - max_removed_per_cond
         grpnames <- names(sspace)
-        num_cases <- 0
-        grpsizes <- data.table::data.table(t(vapply(sspace, length, 0)))
+        grpsizes <-
+            data.table::data.table(t(vapply(sspace, length, 0)))
         if (!is.null(group_sizes)) {
             RUnit::checkTrue(
-                setequal(names(group_sizes), names(grpsizes)),
-                "The names of group_sizes and the conditions must be the same"
+                all(group_sizes[setdiff(names(group_sizes), condition_names)] == 0, na.rm = TRUE),
+                sprintf("The names of group_sizes and the conditions must be the same: %s; %s",
+                        paste(names(group_sizes), collapse = ', '),
+                        paste(names(grpsizes), collapse = ', '))
             )
-            group_sizes <- group_sizes[names(grpsizes)]
-            if (!is.null(props))
-                props <- .normalize_props(props, condition)
+            group_sizes <- group_sizes[condition_names]
         }
+
+        num_cases <- 0
         while (min_preserved < sum(grpsizes[1, grpnames, with = FALSE])) {
             grpsizes <- .decrease_group_sizes(grpsizes, grpnames, minpergrp)
             if (nrow(grpsizes) == 0)
@@ -113,7 +151,11 @@ estimate_exhaustive <-
                                               ), grpsizes[[grpsizes_row, cond]]),
                                               bigz = TRUE)))
                 if (!is.null(props) &&
-                    isTRUE(all.equal(unlist(grpsizes[grpsizes_row]), group_sizes)))
+                    isTRUE(all.equal(
+                        unlist(grpsizes[grpsizes_row]),
+                        group_sizes,
+                        tolerance = .tolerance
+                    )))
                     break
             }
             if (print_info) {
@@ -134,6 +176,15 @@ estimate_exhaustive <-
                     ".\n",
                     sep = ""
                 )
+            }
+            if (num_cases > max_cases) {
+                cat(
+                    "Number of cases is definitely more than max_cases argument (",
+                    max_cases,
+                    "), stopping calculation.\n",
+                    sep = ""
+                )
+                break
             }
         }
         if (num_cases > .Machine$integer.max)

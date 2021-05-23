@@ -4,9 +4,16 @@
 \alias{compare_ldamatch_outputs}
 \title{Compares outputs of ldamatch runs.}
 \usage{
-compare_ldamatch_outputs(is.in1, is.in2, condition, covariates = matrix(),
-  halting_test = NA, props = NULL, prefer_test = is.null(props),
-  tiebreaker = NULL)
+compare_ldamatch_outputs(
+  is.in1,
+  is.in2,
+  condition,
+  covariates = matrix(),
+  halting_test = NA,
+  props = prop.table(table(condition)),
+  prefer_test = is.null(props),
+  tiebreaker = NULL
+)
 }
 \arguments{
 \item{is.in1}{A logical vector for output 1, TRUE iff row is in the match.}
@@ -35,9 +42,7 @@ or the names of the conditions
 for which we prefer to preserve the subjects,
 in decreasing order of preference. If not specified, the
 (full) sample proportions are used.
-This is enforced by the "heuristic1" method,
-preferred among configurations with the same number of
-total subjects by the "exhaustive" method, and
+This is preferred among configurations with the same
 taken into account by the other methods to some extent.
 For example, c(A = 0.4, B = 0.4, C = 0.2) means that
 we would like the number of subjects in groups A, B, and
@@ -47,9 +52,8 @@ that if possible, we would like to keep all subjects
 in group A, and prefer keeping subjects in B, even if
 it results in losing more subjects from C.}
 
-\item{prefer_test}{If TRUE, prefers higher test statistic more than
-the group size proportion; default is FALSE if props
-is specified, TRUE if it is not.}
+\item{prefer_test}{If TRUE, it prioritizes the test statistic more than
+the group size proportion.}
 
 \item{tiebreaker}{NULL, or a function similar to halting_test, used to
 decide between cases for which halting_test yields
@@ -68,4 +72,3 @@ better (i.e. larger) test statistic for the matched groups.
 The preference order for the last two items can be reversed by specifying
 prefer_test = TRUE.
 }
-

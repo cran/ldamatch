@@ -4,8 +4,20 @@
 \alias{search_random}
 \title{Searches by randomly selecting subspaces with decreasing expected size.}
 \usage{
-search_random(condition, covariates, halting_test, thresh, props, max_removed,
-  tiebreaker = NULL, replicates, print_info = TRUE, ...)
+search_random(
+  condition,
+  covariates,
+  halting_test,
+  thresh,
+  props,
+  max_removed_per_cond,
+  tiebreaker = NULL,
+  replicates,
+  prefer_test = TRUE,
+  print_info = TRUE,
+  given_args = NULL,
+  ...
+)
 }
 \arguments{
 \item{condition}{A factor vector containing condition labels.}
@@ -33,9 +45,7 @@ or the names of the conditions
 for which we prefer to preserve the subjects,
 in decreasing order of preference. If not specified, the
 (full) sample proportions are used.
-This is enforced by the "heuristic1" method,
-preferred among configurations with the same number of
-total subjects by the "exhaustive" method, and
+This is preferred among configurations with the same
 taken into account by the other methods to some extent.
 For example, c(A = 0.4, B = 0.4, C = 0.2) means that
 we would like the number of subjects in groups A, B, and
@@ -45,9 +55,8 @@ that if possible, we would like to keep all subjects
 in group A, and prefer keeping subjects in B, even if
 it results in losing more subjects from C.}
 
-\item{max_removed}{The maximum number of subjects that can be removed from
-each group. It must have a valid number for each group,
-and the groups must be in the same order as in sspace.}
+\item{max_removed_per_cond}{The maximum number of subjects that can be removed from
+each group. It must have a valid number for each group.}
 
 \item{tiebreaker}{NULL, or a function similar to halting_test, used to
 decide between cases for which halting_test yields
@@ -57,11 +66,17 @@ equal values.}
 performed. This is only used for the "random"
 method.}
 
+\item{prefer_test}{If TRUE, prefers higher test statistic more than
+the expected group size proportion; default is TRUE.
+Used by all algorithms except exhaustive, which always}
+
 \item{print_info}{If TRUE, prints summary information on the input and the
 results, as well as progress information for the
 exhaustive search and random algorithms. Default: TRUE;
 can be changed using
 \code{\link{set_param}("PRINT_INFO", FALSE)}.}
+
+\item{given_args}{The names of arguments given to the search function.}
 
 \item{...}{Consumes extra parameters that are not used by the
 search algorithm at hand; this function gives a warning
@@ -74,4 +89,3 @@ All results found by search method in a list. It raises a
 \description{
 Searches by randomly selecting subspaces with decreasing expected size.
 }
-

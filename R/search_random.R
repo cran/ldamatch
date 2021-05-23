@@ -9,6 +9,8 @@
 #' @param rcounts  The number of subjects that can be removed for each group.
 #'
 #' @param props The expected proportion of subjects for each group.
+#'
+#' @keywords internal
 .calc_multipliers <- function(counts, rcounts, props) {
     m <-
         (counts - props / props[[1]] * (counts[[1]] - rcounts[[1]])) / rcounts
@@ -19,9 +21,8 @@
 
 #' Searches by randomly selecting subspaces with decreasing expected size.
 #'
-#' @param max_removed   The maximum number of subjects that can be removed from
-#'                      each group. It must have a valid number for each group,
-#'                      and the groups must be in the same order as in sspace.
+#' @param max_removed_per_cond   The maximum number of subjects that can be removed from
+#'                      each group. It must have a valid number for each group.
 #'
 #' @inheritParams match_groups
 #' @inheritParams .warn_about_extra_params
@@ -36,21 +37,19 @@ search_random <- function(condition,
                           halting_test,
                           thresh,
                           props,
-                          max_removed,
+                          max_removed_per_cond,
                           tiebreaker = NULL,
                           replicates,
+                          prefer_test = TRUE,
                           print_info = TRUE,
+                          given_args = NULL,
                           ...) {
-    .warn_about_extra_params(...)
+    .warn_about_extra_params(given_args, ...)
     # Checks replicates argument.
-    if (is.null(replicates)) {
-        replicates <- get("RND_DEFAULT_REPLICATES", .ldamatch_globals)
-    } else {
-        RUnit::checkTrue(
-            length(replicates) == 1 && replicates %% 1 == 0,
-            "The replicates parameter must be one integer number"
-        )
-    }
+    RUnit::checkTrue(
+        length(replicates) == 1 && replicates %% 1 == 0,
+        "The replicates parameter must be one integer number"
+    )
     # Searches subject space.
     sspace <- split(seq_along(condition), condition)
     counts <- table(condition)  # total number of subjects
@@ -58,7 +57,13 @@ search_random <- function(condition,
         vapply(sspace, length, 0)  # number of subjects for removal
     rcounts <-
         rcounts - (rcounts == counts)  # do not remove all subjects
-    multipliers <- .calc_multipliers(counts, rcounts, props)
+    # If props refers to order of groups we wish to keep unchanged,
+    # then we just use the group size proportions here.
+    multipliers <-
+        .calc_multipliers(counts, rcounts, if (length(props) == length(counts))
+            props
+            else
+                counts)
     start <-
         max(1, floor(min((replicates - 1) / (rcounts * multipliers - 1)
         )))
@@ -71,7 +76,7 @@ search_random <- function(condition,
             pos <- i
         nrs <-
             stats::rbinom(length(sspace), rcounts, multipliers * pos / end)
-        nrs <- pmin(nrs, max_removed)
+        nrs <- pmin(nrs, max_removed_per_cond)
         is.in <- rep(TRUE, length(condition))
         mapply(function(s, nr, len)
             is.in[sample(s, nr)] <<- FALSE, sspace, nrs)
@@ -87,14 +92,15 @@ search_random <- function(condition,
             best <- list(metric = ratio, sets = list(is.in))
             best_num <- sum(is.in)
         } else {
-            cmp <- compare_ldamatch_outputs(
+            cmp <- .internally_compare_ldamatch_outputs(
                 is.in,
                 best$sets[[1]],
                 condition,
                 covariates,
                 halting_test,
                 props,
-                tiebreaker = tiebreaker
+                prefer_test = prefer_test,
+                tiebreaker
             )
             if (cmp > 0) {
                 best <- list(metric = ratio, sets = list(is.in))

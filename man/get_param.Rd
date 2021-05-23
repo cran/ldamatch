@@ -2,7 +2,7 @@
 % Please edit documentation in R/globals.R
 \name{get_param}
 \alias{get_param}
-\title{Gets parameter value for ldamatch.}
+\title{Gets value for ldamatch global parameter.}
 \usage{
 get_param(name)
 }
@@ -13,9 +13,8 @@ get_param(name)
 The value of the global parameter.
 }
 \description{
-Gets parameter value for ldamatch.
+Gets value for ldamatch global parameter.
 }
 \seealso{
 \code{\link{set_param}} for parameter names.
 }
-

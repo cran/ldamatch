@@ -23,4 +23,3 @@ The ratio of the p-value and the threshold, or 0 if the p-value is
 Warnings such as "ANOVA F-tests on an essentially perfect fit are unreliable"
 are suppressed.
 }
-

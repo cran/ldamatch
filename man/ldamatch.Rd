@@ -3,7 +3,6 @@
 \docType{package}
 \name{ldamatch}
 \alias{ldamatch}
-\alias{ldamatch-package}
 \title{ldamatch: Selection of Statistically Similar Research Groups.}
 \description{
 Select statistically similar research groups by backward selection
@@ -13,4 +12,3 @@ multiple heuristics based on the test statistic,
 and parallelized exhaustive search.
 See the help help for function \code{\link{match_groups}}.
 }
-

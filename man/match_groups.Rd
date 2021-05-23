@@ -4,12 +4,25 @@
 \alias{match_groups}
 \title{Creates a matched group via backward selection.}
 \usage{
-match_groups(condition, covariates, halting_test, thresh = 0.2,
-  method = c("heuristic1", "random", "heuristic2", "heuristic3", "heuristic4",
-  "exhaustive"), props = prop.table(table(condition)), replicates = NULL,
-  min_preserved = NULL, print_info = get("PRINT_INFO", .ldamatch_globals),
-  max_removed = NULL, tiebreaker = NULL, lookahead = NULL,
-  all_results = FALSE)
+match_groups(
+  condition,
+  covariates,
+  halting_test,
+  thresh = 0.2,
+  method = ldamatch::matching_methods,
+  props = prop.table(table(condition)),
+  replicates = get("RND_DEFAULT_REPLICATES", .ldamatch_globals),
+  min_preserved = length(levels(condition)),
+  print_info = get("PRINT_INFO", .ldamatch_globals),
+  max_removed_per_cond = NULL,
+  tiebreaker = NULL,
+  lookahead = 2,
+  all_results = FALSE,
+  prefer_test = TRUE,
+  max_removed_per_step = 1,
+  max_removed_percent_per_step = 0.5,
+  ratio_for_slowdown = 0.5
+)
 }
 \arguments{
 \item{condition}{A factor vector containing condition labels.}
@@ -31,11 +44,7 @@ tests using \code{\link{create_halting_test}}.}
 \item{thresh}{The return value of halting_test has to be greater than
 or equal to thresh for the matched groups.}
 
-\item{method}{The choice of search method, one of "heuristic1"
-(formerly called "heuristic"), "random", "heuristic2",
-"heuristic3", "heuristic4", and "exhaustive".
-The running time increases approximately in the above
-order.
+\item{method}{The choice of search method, one of "random",
 You can get more information about each method on the
 help page for "search_<method_name>"
 (e.g. "\code{\link{search_exhaustive}}").}
@@ -46,9 +55,7 @@ or the names of the conditions
 for which we prefer to preserve the subjects,
 in decreasing order of preference. If not specified, the
 (full) sample proportions are used.
-This is enforced by the "heuristic1" method,
-preferred among configurations with the same number of
-total subjects by the "exhaustive" method, and
+This is preferred among configurations with the same
 taken into account by the other methods to some extent.
 For example, c(A = 0.4, B = 0.4, C = 0.2) means that
 we would like the number of subjects in groups A, B, and
@@ -73,11 +80,11 @@ exhaustive search and random algorithms. Default: TRUE;
 can be changed using
 \code{\link{set_param}("PRINT_INFO", FALSE)}.}
 
-\item{max_removed}{A named integer vector, containing the maximum number
+\item{max_removed_per_cond}{A named integer vector, containing the maximum number
 of subjects that can be removed from each group.
 Specify 0 for groups if you want to preserve
 all of their subjects. If you do not specify a value
-for a group, it defaults to one less than the group size.
+for a group, it defaults to 2 less than the group size.
 Values outside the valid range of 0..(N-1)
 (where N is the number of subjects in the group)
 are corrected without a warning.}
@@ -87,14 +94,35 @@ decide between cases for which halting_test yields
 equal values.}
 
 \item{lookahead}{The lookahead to use: a positive integer.
-it is used by the heuristic3 and heuristic4 algorithms,
-with a default of 2. As you increase it,
-the running time increases exponentially.}
+It is used by the heuristic3 and heuristic4 algorithms,
+with a default of 2.
+The running time is O(N ^ lookahead), wheren N is the
+number of subjects.}
 
 \item{all_results}{If TRUE, returns all results found by method in a list.
 (A list is returned even if there is only one result.)
 If FALSE (the default), it returns the first result
 (a logical vector).}
+
+\item{prefer_test}{If TRUE, prefers higher test statistic more than
+the expected group size proportion; default is TRUE.
+Used by all algorithms except exhaustive, which always}
+
+\item{max_removed_per_step}{The number of equivalent subjects
+that can be removed in each step. (The actual allowed
+number may be less depending on the p-value / theshold ratio.)
+This parameters is used by the heuristic3 and heuristic4
+algorithms, with a default value of 1.}
+
+\item{max_removed_percent_per_step}{The percentage of remaining subjects
+that can be removed in each step.
+Used when max_removed_per_step > 1,
+with a default value of 0.5.}
+
+\item{ratio_for_slowdown}{The p-value / threshold ratio at which
+it starts removing subjects one by one.
+Used when max_removed_per_step > 1,
+with a default value of 0.5.}
 }
 \value{
 A logical vector that contains TRUE for the conditions
@@ -109,7 +137,7 @@ The exhaustive, heuristic3, and heuristic4 search methods use the foreach
 package to parallelize computation.
 To take advantage of this, you must register a cluster.
 For example, to use all but one of the CPU cores, run:
-  \code{doMC::registerDoMC(max(1, parallel::detectCores() - 1))}
+  \code{doParallel::registerDoParallel(cores = max(1, parallel::detectCores() - 1))}
 To use sequential processing without getting a warning, run:
   \code{foreach::registerDoSEQ()}
 }
@@ -122,5 +150,6 @@ the goodness of the result.
 
 \code{\link{compare_ldamatch_outputs}} for comparing multiple
 different results from this function.
-}
 
+\code{\link{search_heuristic2}, \link{search_heuristic3}, \link{search_heuristic4}, \link{search_random}, \link{search_exhaustive}} for
+}

@@ -4,9 +4,24 @@
 \alias{search_heuristic4}
 \title{Finds matching using depth-first search, looking ahead n steps.}
 \usage{
-search_heuristic4(condition, covariates, halting_test, thresh, props,
-  max_removed, tiebreaker = NULL, min_preserved = NULL, lookahead = NULL,
-  print_info = TRUE, ...)
+search_heuristic4(
+  condition,
+  covariates,
+  halting_test,
+  thresh,
+  props,
+  max_removed_per_cond,
+  tiebreaker = NULL,
+  min_preserved = length(levels(condition)),
+  lookahead = 2,
+  prefer_test = TRUE,
+  print_info = TRUE,
+  max_removed_per_step = 1,
+  max_removed_percent_per_step = 0.5,
+  ratio_for_slowdown = 0.5,
+  given_args = NULL,
+  ...
+)
 }
 \arguments{
 \item{condition}{A factor vector containing condition labels.}
@@ -34,9 +49,7 @@ or the names of the conditions
 for which we prefer to preserve the subjects,
 in decreasing order of preference. If not specified, the
 (full) sample proportions are used.
-This is enforced by the "heuristic1" method,
-preferred among configurations with the same number of
-total subjects by the "exhaustive" method, and
+This is preferred among configurations with the same
 taken into account by the other methods to some extent.
 For example, c(A = 0.4, B = 0.4, C = 0.2) means that
 we would like the number of subjects in groups A, B, and
@@ -46,7 +59,7 @@ that if possible, we would like to keep all subjects
 in group A, and prefer keeping subjects in B, even if
 it results in losing more subjects from C.}
 
-\item{max_removed}{The maximum number of subjects that can be removed from
+\item{max_removed_per_cond}{The maximum number of subjects that can be removed from
 each group. It must have a valid number for each group.}
 
 \item{tiebreaker}{NULL, or a function similar to halting_test, used to
@@ -59,15 +72,38 @@ forever to run, but instead fail when a solution is not
 found when preserving this number of subjects.}
 
 \item{lookahead}{The lookahead to use: a positive integer.
-it is used by the heuristic3 and heuristic4 algorithms,
-with a default of 2. As you increase it,
-the running time increases exponentially.}
+It is used by the heuristic3 and heuristic4 algorithms,
+with a default of 2.
+The running time is O(N ^ lookahead), wheren N is the
+number of subjects.}
+
+\item{prefer_test}{If TRUE, prefers higher test statistic more than
+the expected group size proportion; default is TRUE.
+Used by all algorithms except exhaustive, which always}
 
 \item{print_info}{If TRUE, prints summary information on the input and the
 results, as well as progress information for the
 exhaustive search and random algorithms. Default: TRUE;
 can be changed using
 \code{\link{set_param}("PRINT_INFO", FALSE)}.}
+
+\item{max_removed_per_step}{The number of equivalent subjects
+that can be removed in each step. (The actual allowed
+number may be less depending on the p-value / theshold ratio.)
+This parameters is used by the heuristic3 and heuristic4
+algorithms, with a default value of 1.}
+
+\item{max_removed_percent_per_step}{The percentage of remaining subjects
+that can be removed in each step.
+Used when max_removed_per_step > 1,
+with a default value of 0.5.}
+
+\item{ratio_for_slowdown}{The p-value / threshold ratio at which
+it starts removing subjects one by one.
+Used when max_removed_per_step > 1,
+with a default value of 0.5.}
+
+\item{given_args}{The names of arguments given to the search function.}
 
 \item{...}{Consumes extra parameters that are not used by the
 search algorithm at hand; this function gives a warning
@@ -92,4 +128,3 @@ but converges in another run). If print_info = TRUE (the default), you will
 see a message about "Random choices" if the algorithm needed to make such
 random decisions.
 }
-

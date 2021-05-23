@@ -8,13 +8,16 @@
 #' @return A data.table containing only the rows of dat with for best test
 #'         statistic values (decided primarily by halting_test, then by
 #'         tiebreaker).
+#'
+#' @keywords internal
 .choose_best_test_statistic <- function(dat,
                                         condition,
                                         covariates,
                                         halting_test,
                                         thresh,
                                         tiebreaker) {
-    ratio <- tiebreaker_ratio <- ind <- NULL  # to suppress codetools warnings
+    ratio <-
+        tiebreaker_ratio <- ind <- NULL  # to suppress codetools warnings
     dat[, ratio :=  vapply(ind, function(ind)
         .calc_p_thresh_ratio(condition[-ind], covariates[-ind, , drop = FALSE],
                              halting_test, thresh), 0.0)]
@@ -25,7 +28,8 @@
         dat[, tiebreaker_ratio :=  vapply(ind, function(ind)
             .calc_p_thresh_ratio(condition[-ind], covariates[-ind, , drop = FALSE],
                                  tiebreaker, thresh), 0.0)]
-        dat_tiebreaker <- suppressWarnings(dat[tiebreaker_ratio == max(tiebreaker_ratio, na.rm = TRUE)])
+        dat_tiebreaker <-
+            suppressWarnings(dat[tiebreaker_ratio == max(tiebreaker_ratio, na.rm = TRUE)])
         if (nrow(dat_tiebreaker) >= 1)
             dat <- dat_tiebreaker
     }
@@ -33,16 +37,20 @@
 }
 
 
-#' Finds matching using depth-first search recursively.
+#' OBSOLETE: Finds matching using depth-first search recursively.
+#'
+#' Please use the heuristic3 search algorithm with lookahead=1 instead
+#' for nearly equivalent results. Note that heuristic3 is parallelized,
+#' more memory efficient, and chooses subject to remove randomly from among
+#' equivalent choices instead of choosing the first one deterministically.
+#' This function is implemented recursively, so may run out of memory when
+#' applied to many subjects.
 #'
 #' In each step, it removes one subject from the set of subjects with
 #' the smallest p-value recursively.
 #'
-#' @param max_removed   The maximum number of subjects that can be removed from
+#' @param max_removed_per_cond   The maximum number of subjects that can be removed from
 #'                      each group. It must have a valid number for each group.
-#'
-#' @param prefer_test   If TRUE, prefers higher test statistic more than
-#'                      the group size proportion; default is TRUE.
 #'
 #' @inheritParams match_groups
 #' @inheritParams .warn_about_extra_params
@@ -56,17 +64,24 @@ search_heuristic2 <- function(condition,
                               halting_test,
                               thresh,
                               props,
-                              max_removed,
+                              max_removed_per_cond,
                               tiebreaker = NULL,
                               prefer_test = TRUE,
-                              print_info = FALSE,
+                              print_info = TRUE,
+                              given_args = NULL,
                               ...) {
-    .warn_about_extra_params(...)
+    .warn_about_extra_params(given_args, ...)
+    if (print_info) {
+        cat(sprintf("Number of subjects: %d\n", length(condition)))
+    }
     # Ends recursion when matched.
     if (halting_test(condition, covariates, thresh))
         return(list(rep(TRUE, length(condition))))
     # Finds best direction.
-    dat <- data.table::data.table(ind = which(condition %in% names(which(max_removed > 0))))
+    dat <-
+        data.table::data.table(ind = which(condition %in% names(which(
+            max_removed_per_cond > 0
+        ))))
     if (prefer_test)
         dat <- .choose_best_test_statistic(dat,
                                            condition,
@@ -93,16 +108,15 @@ search_heuristic2 <- function(condition,
     # Removes each subject for best p-value / thresh ratio in turn, and finds
     # balance recursively.
     for (ind in dat$ind) {
-        max_removed.for_subset <- max_removed
-        max_removed.for_subset[condition[ind]] <-
-            max_removed[condition[ind]] - 1
+        max_removed_per_cond.for_subset <- max_removed_per_cond
+        dec(max_removed_per_cond.for_subset[condition[ind]]) <- 1
         lis.in.for_subset  <- try(search_heuristic2(
             condition[-ind],
             covariates[-ind, , drop = FALSE],
             halting_test,
             thresh,
             props,
-            max_removed.for_subset,
+            max_removed_per_cond.for_subset,
             tiebreaker
         ),
         silent = TRUE)

@@ -4,9 +4,16 @@
 \alias{estimate_exhaustive}
 \title{Estimates the maximum number of cases to be checked during exhaustive search.}
 \usage{
-estimate_exhaustive(min_preserved = sum(group_sizes), condition,
-  cases_per_second = 100, print_info = TRUE, max_removed = NULL,
-  group_sizes = NULL, props = NULL)
+estimate_exhaustive(
+  min_preserved = sum(group_sizes),
+  condition,
+  cases_per_second = 100,
+  print_info = TRUE,
+  max_removed_per_cond = NULL,
+  group_sizes = NULL,
+  props = prop.table(table(condition)),
+  max_cases = Inf
+)
 }
 \arguments{
 \item{min_preserved}{Assumes that at least a total of this many subjects
@@ -22,11 +29,11 @@ the exhaustive search; default: 100.}
 the number of cases and estimated time when removing
 1, 2, ... subjects.}
 
-\item{max_removed}{A named integer vector, containing the maximum number
+\item{max_removed_per_cond}{A named integer vector, containing the maximum number
 of subjects that can be removed from each group.
 Specify 0 for groups if you want to preserve
 all of their subjects. If you do not specify a value
-for a group, it defaults to one less than the group size.
+for a group, it defaults to 2 less than the group size.
 Values outside the valid range of 0..(N-1)
 (where N is the number of subjects in the group)
 are corrected without a warning.}
@@ -35,11 +42,18 @@ are corrected without a warning.}
 matched solution for; min_preserved need not be
 specified if this one is.}
 
-\item{props}{The desired proportions (percentage) of the sample
-for each condition; if this and group_sizes are both
-specified, the maximum number of cases to considered
-by the exhaustive search can be calculated more
-precisely.}
+\item{props}{Either the desired proportions (percentage) of the
+sample for each condition as a named vector,
+or the names of the conditions
+for which we prefer to preserve the subjects,
+in decreasing order of preference. If not specified, the
+(full) sample proportions are used.}
+
+\item{max_cases}{Once it is certain that the number of cases is
+definitely above this number, calculation stops. In this case,
+the returned number is guaranteed to be larger than max_cases,
+but it is not the exact number of exhaustive cases.
+Default is infimum, i.e. the exact number of cases is calculated.}
 }
 \value{
 The maximum number of cases: an integer if not greater than the
@@ -54,4 +68,3 @@ estimate_exhaustive(58, as.factor(c(rep("ALN", 25), rep("TD", 44))))
 estimate_exhaustive(84, as.factor(c(rep("ASD", 51), rep("TD", 44))))
 
 }
-

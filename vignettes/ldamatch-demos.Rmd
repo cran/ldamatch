@@ -20,13 +20,6 @@ condition <- as.factor(c(rep("control", 2 * SIZE), rep("treatment", SIZE)))
 covariate1 <- c(rnorm(2 * SIZE), rnorm(SIZE, 1, 2))
 ```
 
-# Univariate case (with heuristic1 search)...
-
-```{r}
-is.in <- match_groups(condition, covariate1, t_halt)
-print(table(condition, is.in))
-```
-
 # Univariate case (with random search)...
 
 ```{r}
@@ -46,13 +39,6 @@ print(table(condition, is.in))
 ```{r}
 covariate2 <- c(rnorm(2 * SIZE), rnorm(SIZE, 1, 2))
 covariates <- cbind(covariate1, covariate2)
-```
-
-# Multivariate case (with heuristic1 search)...
-
-```{r}
-is.in <- match_groups(condition, covariates, t_halt)
-print(table(condition, is.in))
 ```
 
 # Multivariate case (with heuristic2 search)...
@@ -91,10 +77,10 @@ is.in <- match_groups(condition, covariates, wilks_halt, method = "random")
 print(table(condition, is.in))
 ```
 
-# Multivariate case (with Anderson-Darling test and heuristic1 search)...
+# Multivariate case (with Anderson-Darling test and heuristic2 search)...
 
 ```{r}
-is.in <- match_groups(condition, covariates, t_halt, method = "heuristic1")
+is.in <- match_groups(condition, covariates, ad_halt, method = "heuristic2", prefer_test = TRUE)
 print(table(condition, is.in))
 ```
 
@@ -116,8 +102,9 @@ is.ins <- match_groups(condition, covariate1, t_halt, method = "exhaustive", all
 print(table(condition, is.ins[[1]]))
 print(length(is.ins))
 
-# (Confirm exhaustive search by applying heuristic1 search to it.)
-is.in <- match_groups(condition[is.ins[[1]]], covariate1[is.ins[[1]]], t_halt)
+# (Confirm exhaustive search by applying heuristic2 search to it.)
+is.in <- match_groups(condition[is.ins[[1]]], covariate1[is.ins[[1]]], t_halt,
+                      method = "heuristic2")
 print(table(condition[is.ins[[1]]], is.in))
 ```
 
@@ -134,10 +121,10 @@ covariate2 <- c(rnorm(SIZE, 0, 1), rnorm(SIZE, 0, 2), rnorm(SIZE, 1, 2))
 covariates <- cbind(covariate1, covariate2)
 ```
 
-# Univariate case for more than two groups (with heuristic1 search)...
+# Univariate case for more than two groups (with heuristic2 search)...
 
 ```{r}
-is.in <- match_groups(condition, covariates, t_ad_halt, method = "heuristic1")
+is.in <- match_groups(condition, covariates, t_ad_halt, method = "heuristic2")
 print(table(condition, is.in))
 ```
 

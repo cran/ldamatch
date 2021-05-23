@@ -14,58 +14,20 @@ NULL
 
 ## Actual matching procedure.
 
-#' Creates ordered subspace of subject candidates for removal, using LDA.
-#' Excludes constant covariates from consideration.
-#'
-#' @inheritParams match_groups
-#'
-#' @return An ordered subject subspace: a list of vectors, with one vector per
-#' group containing the corresponding subject indices.
-#'
-#' @importFrom MASS lda
-#' @importFrom stats coef var
-.create_subject_subspace_using_LDA <-
-    function(condition, covariates) {
-        ## Computes linear projection vector, after removing constant columns.
-        covariates <- covariates[, apply(covariates, 2, stats::var, na.rm = TRUE) != 0, drop = FALSE]
-        if (ncol(covariates) == 0) {
-            stop("No non-constant variables in covariates")
-        } else if (ncol(covariates) == 1) {
-            W <- 1  # just uses the identity projection.
-        } else {
-            W <- stats::coef(MASS::lda(condition ~ covariates))[, 1]
-        }
-        projection <- as.vector(covariates %*% W)
-        ## Set up search space.
-        # Computes means.
-        mu <- mean(projection)
-        mu.conditions <- tapply(projection, condition, mean)[condition]
-        # Locates observations driving condition/covariate correlation(s).
-        correlates <-
-            ((projection < mu.conditions) == (mu.conditions < mu))
-        # Computes order, filtering out non-correlates.
-        ord <- order(projection)
-        ord <- ord[correlates[ord]]
-        # Splits on condition and reverse for those above.
-        sspace <- split(ord, condition[ord])
-        for (name in names(sspace))
-            if (projection[sspace[[name]][1]] > mu)
-                sspace[[name]] <- rev(sspace[[name]])
-        sspace
-    }
-
-
 #' Normalizes the props parameter for match_groups().
 #'
 #' @inheritParams match_groups
+#' @param keep_all_items  If TRUE and props is a character vector, last item is not dropped.
 #'
 #' @return A named vector: if props contains proportions, it is the same, but
 #' ordered to follow the levels of condition; if props contains names of
-#' conditions, the total number of items for the condition names in props.
+#' conditions, the total number of subjects for the condition names in props.
 #'
 #' @importFrom RUnit checkTrue
 #' @importFrom utils head
-.normalize_props <- function(props, condition) {
+#'
+#' @keywords internal
+.normalize_props <- function(props, condition, keep_last_item = FALSE) {
     if (is.null(props)) {
         props <- prop.table(table(condition))
     } else if (is.numeric(props)) {
@@ -82,37 +44,85 @@ NULL
                          "Only valid condition names can be used in props")
         RUnit::checkTrue(all(table(props) == 1),
                          "Each condition name can only be listed once in props")
-        if (length(props) == length(levels(condition)))
-            props <- utils::head(props, -1)
+        if (length(props) == length(levels(condition)) && !keep_last_item
+        )
+            props <-
+            utils::head(props, -1)  # all items are not necessary
         props <- table(condition)[props]
     } else {
         stop(
             "The props parameter must be vector of group size proportions, ",
             " or names of the conditions that you wish to keep unchanged",
-            " (in decreasing order of preference)"
+            " in decreasing order of preference"
         )
     }
     props
 }
 
 
-#' Normalizes max_removed parameter for match_groups() and estimate_exhaustive().
+#' Normalizes max_removed_per_cond parameter for match_groups() and estimate_exhaustive().
 #'
 #' @inheritParams match_groups
 #'
 #' @importFrom RUnit checkTrue
-.normalize_max_removed <- function(max_removed, condition) {
-    RUnit::checkTrue(length(names(max_removed)) == length(max_removed),
-                     "Values in max_removed must be named")
-    max_removed_ <- table(condition) - 1
-    max_removed_[names(max_removed)] <- unlist(max_removed)
-    max_removed <- pmax(pmin(max_removed_, table(condition) - 1), 0)
-    RUnit::checkTrue(
-        identical(names(max_removed), names(table(condition))),
-        "Values in max_removed must use the same group names as condition"
-    )
-    max_removed
-}
+#'
+#' @keywords internal
+.normalize_max_removed_per_cond <-
+    function(max_removed_per_cond, condition) {
+        RUnit::checkTrue(
+            length(names(max_removed_per_cond)) == length(max_removed_per_cond),
+            "Values in max_removed_per_cond must be named"
+        )
+        max_removed_per_cond_ <- table(condition) - 2
+        max_removed_per_cond_[names(max_removed_per_cond)] <-
+            unlist(max_removed_per_cond)
+        max_removed_per_cond <-
+            pmax(pmin(max_removed_per_cond_, table(condition) - 1), 0)
+        RUnit::checkTrue(
+            identical(names(max_removed_per_cond), names(table(condition))),
+            "Values in max_removed_per_cond must use the same group names as condition"
+        )
+        max_removed_per_cond
+    }
+
+
+#' Determines which arguments for a function, which is its caller by default.
+#'
+#' @param fun    A function; default: the caller.
+#' @param ncall  The parent frame index; default: 3 (the great-grandparent).
+#' @return A named boolean vector that contains whether each argument is missing.
+#'
+#' @importFrom methods missingArg
+.get_if_args_are_missing <-
+    function(fun = sys.function(-1), ncall = 3) {
+        f_args <- formals(fun)
+        args <- setdiff(names(f_args), "...")
+        vapply(args, function(arg_name)
+            methods::missingArg(
+                as.name(arg_name),
+                envir = parent.frame(ncall),
+                eval = TRUE
+            ),
+            FUN.VALUE = TRUE)
+    }
+
+
+#' The available methods for matching.
+#' @export
+matching_methods = c("heuristic2",
+                     "heuristic3",
+                     "heuristic4",
+                     "random",
+                     "exhaustive")
+
+#' The available parallelized methods for matching.
+#' @export
+parallelized_matching_methods = c("heuristic3", "heuristic4", "exhaustive")
+
+
+#' The available nondeterministic methods for matching.
+#' @export
+nondeterministic_matching_methods = c("random", "heuristic3", "heuristic4")
 
 
 #' Creates a matched group via backward selection.
@@ -122,7 +132,7 @@ NULL
 #' package to parallelize computation.
 #' To take advantage of this, you must register a cluster.
 #' For example, to use all but one of the CPU cores, run:
-#'   \code{doMC::registerDoMC(max(1, parallel::detectCores() - 1))}
+#'   \code{doParallel::registerDoParallel(cores = max(1, parallel::detectCores() - 1))}
 #' To use sequential processing without getting a warning, run:
 #'   \code{foreach::registerDoSEQ()}
 #'
@@ -145,11 +155,10 @@ NULL
 #' @param thresh        The return value of halting_test has to be greater than
 #'                      or equal to thresh for the matched groups.
 #'
-#' @param method        The choice of search method, one of "heuristic1"
-#'                      (formerly called "heuristic"), "random", "heuristic2",
-#'                      "heuristic3", "heuristic4", and "exhaustive".
-#'                      The running time increases approximately in the above
-#'                      order.
+#' @param method        The choice of search method, one of "random",
+#                       "heuristic2", "heuristic3", "heuristic4", and
+#                       "exhaustive". The running time increases approximately
+#                       in the above order.
 #'                      You can get more information about each method on the
 #'                      help page for "search_<method_name>"
 #'                      (e.g. "\code{\link{search_exhaustive}}").
@@ -160,9 +169,8 @@ NULL
 #'                      for which we prefer to preserve the subjects,
 #'                      in decreasing order of preference. If not specified, the
 #'                      (full) sample proportions are used.
-#'                      This is enforced by the "heuristic1" method,
-#'                      preferred among configurations with the same number of
-#'                      total subjects by the "exhaustive" method, and
+#'                      This is preferred among configurations with the same
+#                       number of total subjects by the "exhaustive" method, and
 #'                      taken into account by the other methods to some extent.
 #'                      For example, c(A = 0.4, B = 0.4, C = 0.2) means that
 #'                      we would like the number of subjects in groups A, B, and
@@ -187,11 +195,11 @@ NULL
 #'                      forever to run, but instead fail when a solution is not
 #'                      found when preserving this number of subjects.
 #'
-#' @param max_removed   A named integer vector, containing the maximum number
+#' @param max_removed_per_cond   A named integer vector, containing the maximum number
 #'                      of subjects that can be removed from each group.
 #'                      Specify 0 for groups if you want to preserve
 #'                      all of their subjects. If you do not specify a value
-#'                      for a group, it defaults to one less than the group size.
+#'                      for a group, it defaults to 2 less than the group size.
 #'                      Values outside the valid range of 0..(N-1)
 #'                      (where N is the number of subjects in the group)
 #'                      are corrected without a warning.
@@ -201,14 +209,38 @@ NULL
 #'                      equal values.
 #'
 #' @param lookahead     The lookahead to use: a positive integer.
-#'                      it is used by the heuristic3 and heuristic4 algorithms,
-#'                      with a default of 2. As you increase it,
-#'                      the running time increases exponentially.
+#'                      It is used by the heuristic3 and heuristic4 algorithms,
+#'                      with a default of 2.
+#'                      The running time is O(N ^ lookahead), wheren N is the
+#'                      number of subjects.
 #'
 #' @param all_results   If TRUE, returns all results found by method in a list.
 #'                      (A list is returned even if there is only one result.)
 #'                      If FALSE (the default), it returns the first result
 #'                      (a logical vector).
+#'
+#' @param prefer_test   If TRUE, prefers higher test statistic more than
+#'                      the expected group size proportion; default is TRUE.
+#'                      Used by all algorithms except exhaustive, which always
+#                       prefers the group size proportion (otherwise it would
+#                       need to evaluate all cases for a certain number of
+#                       remaining subjects before it could decide).
+#'
+#' @param max_removed_per_step   The number of equivalent subjects
+#'                      that can be removed in each step. (The actual allowed
+#'                      number may be less depending on the p-value / theshold ratio.)
+#'                      This parameters is used by the heuristic3 and heuristic4
+#'                      algorithms, with a default value of 1.
+#'
+#' @param max_removed_percent_per_step  The percentage of remaining subjects
+#'                      that can be removed in each step.
+#'                      Used when max_removed_per_step > 1,
+#'                      with a default value of 0.5.
+#'
+#' @param ratio_for_slowdown  The p-value / threshold ratio at which
+#'                      it starts removing subjects one by one.
+#'                      Used when max_removed_per_step > 1,
+#'                      with a default value of 0.5.
 #'
 #' @return              A logical vector that contains TRUE for the conditions
 #'                      that are in the matched groups;
@@ -220,27 +252,27 @@ NULL
 #' the goodness of the result.
 #' @seealso \code{\link{compare_ldamatch_outputs}} for comparing multiple
 #' different results from this function.
-#'
+#' @seealso \code{\link{search_heuristic2}, \link{search_heuristic3}, \link{search_heuristic4}, \link{search_random}, \link{search_exhaustive}} for
+#  more information on the search algorithms.
 #' @export
 match_groups <-
     function(condition,
              covariates,
              halting_test,
              thresh = .2,
-             method = c("heuristic1",
-                        "random",
-                        "heuristic2",
-                        "heuristic3",
-                        "heuristic4",
-                        "exhaustive"),
+             method = ldamatch::matching_methods,
              props = prop.table(table(condition)),
-             replicates = NULL,
-             min_preserved = NULL,
+             replicates = get("RND_DEFAULT_REPLICATES", .ldamatch_globals),
+             min_preserved = length(levels(condition)),
              print_info = get("PRINT_INFO", .ldamatch_globals),
-             max_removed = NULL,
+             max_removed_per_cond = NULL,
              tiebreaker = NULL,
-             lookahead = NULL,
-             all_results = FALSE) {
+             lookahead = 2,
+             all_results = FALSE,
+             prefer_test = TRUE,
+             max_removed_per_step = 1,
+             max_removed_percent_per_step = 0.5,
+             ratio_for_slowdown = 0.5) {
         ## Finds function for method.
         method = match.arg(method)
         search_method <-
@@ -248,10 +280,13 @@ match_groups <-
                 silent = TRUE)
         if (class(search_method) == "try-error")
             stop("Search method ", method, " is not available")
+        if (print_info)
+            cat("Search method: ", method, "\n")
         ## Checks other arguments and create set their values if missing.
+        args_missing <- .get_if_args_are_missing()
         if (length(covariates) == 0) {
             if (print_info)
-                cat("No covariates specified, including all in output.\n")
+                cat("No covariates specified; including all subjects in output.\n")
             is.in <- rep(TRUE, length(condition))
             return(if (all_results)
                 list(is.in)
@@ -277,8 +312,9 @@ match_groups <-
         # Checks props argument.
         props <- .normalize_props(props, condition)
         # Checks length of container arguments.
-        # Checks and normalizes max_removed argument.
-        max_removed <- .normalize_max_removed(max_removed, condition)
+        # Checks and normalizes max_removed_per_cond argument.
+        max_removed_per_cond <-
+            .normalize_max_removed_per_cond(max_removed_per_cond, condition)
         # Checks for a "natural match" before setting up search.
         if (halting_test(condition, covariates, thresh)) {
             if (print_info)
@@ -309,20 +345,26 @@ match_groups <-
             halting_test = halting_test,
             thresh = thresh,
             props = props,
-            max_removed = max_removed,
+            max_removed_per_cond = max_removed_per_cond,
             tiebreaker = tiebreaker,
             replicates = replicates,
             min_preserved = min_preserved,
             lookahead = lookahead,
-            print_info = print_info
+            print_info = print_info,
+            prefer_test = prefer_test,
+            max_removed_per_step = max_removed_per_step,
+            max_removed_percent_per_step = max_removed_percent_per_step,
+            ratio_for_slowdown = ratio_for_slowdown,
+            given_args = names(args_missing)[!args_missing]
         )
         if (print_info) {
-            total_search_time <- (proc.time() - search_start_time)[["elapsed"]]
-            cat("Finished",
+            search_time <- (proc.time() - search_start_time)
+            cat("Finished ",
                 method,
-                "search in",
-                total_search_time,
-                "seconds.\n")
+                " search in ",
+                search_time[["user.self"]] + search_time[["sys.self"]],
+                " seconds (wall click time passed:", search_time[["elapsed"]],
+                ").\n", sep = '')
             grpsizes <- table(condition[lis.in[[1]]])
             cat(
                 "Eventual group sizes:",
@@ -343,6 +385,16 @@ match_groups <-
                     collapse = "\t"
                 ),
                 "\n")
+            cat(
+                "The p-value before matching:",
+                calc_p_value(condition, covariates, halting_test),
+                "\n"
+            )
+            cat(
+                "The p-values after matching:",
+                paste(names(sort(table(sapply(lis.in, function(b) calc_p_value(condition[b], covariates[b, , drop = FALSE], halting_test))), decreasing = TRUE)), collapse = ', '),
+                "\n"
+            )
         }
         if (all_results)
             lis.in

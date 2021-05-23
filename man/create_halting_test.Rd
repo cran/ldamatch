@@ -29,7 +29,7 @@ a value is not specified the defaults are used.
 Note that ordering the functions does not change the
 behavior, but can make the execution of the combined
 function faster, as the later ones are often evaluated
-only if the criteria for the earlier ones is met.}
+only if the criteria for the earlier ones are met.}
 }
 \value{
 A function that returns the minimum of all halting test values;
@@ -43,4 +43,3 @@ p-values does not exceed the threshold. The resulting function expects one
 threshold per halting test in a vector or it recycles the given value(s) to
 get a threshold for each one.
 }
-

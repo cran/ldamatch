@@ -4,8 +4,14 @@
 \alias{calc_metrics}
 \title{Calculates basic metrics about ldamatch search result.}
 \usage{
-calc_metrics(is.in, condition, covariates, halting_test,
-  props = prop.table(table(condition)), tiebreaker = NULL)
+calc_metrics(
+  is.in,
+  condition,
+  covariates,
+  halting_test,
+  props = prop.table(table(condition)),
+  tiebreaker = NULL
+)
 }
 \arguments{
 \item{is.in}{The output of \code{\link{match_groups}()}:
@@ -33,9 +39,7 @@ or the names of the conditions
 for which we prefer to preserve the subjects,
 in decreasing order of preference. If not specified, the
 (full) sample proportions are used.
-This is enforced by the "heuristic1" method,
-preferred among configurations with the same number of
-total subjects by the "exhaustive" method, and
+This is preferred among configurations with the same
 taken into account by the other methods to some extent.
 For example, c(A = 0.4, B = 0.4, C = 0.2) means that
 we would like the number of subjects in groups A, B, and
@@ -54,8 +58,8 @@ A list containing: \describe{
 \item{all.is.in}{all results as a list;}
 \item{is.in}{simply the first item in all.is.in or the error contained
 in is.in if there was an error running \code{\link{match_groups}};}
-\item{num_excluded}{the number of excluded subjects), p_matched
-   (the test statistic from halting_test for the matched groups);}
+\item{num_excluded}{the number of excluded subjects;}
+\item{p_matched}{the test statistic from halting_test for the matched groups;}
 \item{p_tiebreaker}{the test statistic from tiebreaker for the matched groups; and}
 \item{balance_divergence}{a value characterizing the deviation
   from the expected group size proportions specified in props.}
@@ -66,4 +70,3 @@ with a value of NA.
 \description{
 Calculates basic metrics about ldamatch search result.
 }
-

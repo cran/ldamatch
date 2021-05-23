@@ -24,6 +24,8 @@ t_halt <- function(condition, covariates, thresh) {
 #' @return The p-value.
 #'
 #' @importFrom stats t.test
+#'
+#' @keywords internal
 .t_crit <- function(covariate, condition) {
     stats::t.test(covariate ~ condition)$p.value
 }
@@ -50,6 +52,8 @@ U_halt <- function(condition, covariates, thresh) {
 #' @return The p-value.
 #'
 #' @importFrom stats wilcox.test
+#'
+#' @keywords internal
 .U_crit <- function(covariate, condition) {
     stats::wilcox.test(covariate ~ condition)$p.value
 }
@@ -81,6 +85,8 @@ l_halt <- function(condition, covariates, thresh) {
 #' @return The p-value.
 #'
 #' @importFrom car leveneTest
+#'
+#' @keywords internal
 .l_crit <- function(covariate, condition) {
     suppressWarnings(car::leveneTest(covariate ~ condition)["group", "Pr(>F)"])
 }
@@ -106,6 +112,8 @@ ad_halt <- function(condition, covariates, thresh) {
 #' @return The p-value.
 #'
 #' @importFrom kSamples ad.test
+#'
+#' @keywords internal
 .ad_crit <- function(covariate, condition) {
     lkS <- kSamples::ad.test(
         split(covariate, condition),
@@ -147,6 +155,8 @@ ks_halt <- function(condition, covariates, thresh) {
 #' @return The p-value.
 #'
 #' @importFrom stats ks.test
+#'
+#' @keywords internal
 .ks_crit <- function(covariate, condition) {
     cc = split(covariate, condition)
     suppressWarnings(stats::ks.test(cc[[1]], cc[[2]])$p.value)
@@ -192,6 +202,8 @@ f_halt <- function(condition, covariates, thresh) {
 #' @return The p-value.
 #'
 #' @importFrom stats fisher.test
+#'
+#' @keywords internal
 .f_crit <- function(covariate, condition) {
     stats::fisher.test(covariate, condition)$p.value
 }
@@ -204,6 +216,8 @@ f_halt <- function(condition, covariates, thresh) {
 #' @return A vector of halting test functions.
 #'
 #' @importFrom RUnit checkTrue
+#'
+#' @keywords internal
 .get_halting_test <- function(halting_test) {
     halting_test <- if (is.character(halting_test))
         get(halting_test, mode = "function")
@@ -224,10 +238,12 @@ f_halt <- function(condition, covariates, thresh) {
 #' @param hs  Halting tests.
 #'
 #' @return A vector with one threshold value per halting test.
+#'
+#' @keywords internal
 .recycle <- function(ts, hs) {
     reps <- length(hs) / length(ts)
     if (reps != round(reps))
-        stop("number of thresholds not a multiple of number of halting tests")
+        stop("Number of thresholds not a multiple of number of halting tests")
     rep(ts, reps)
 }
 
@@ -262,7 +278,7 @@ f_halt <- function(condition, covariates, thresh) {
 #'                        Note that ordering the functions does not change the
 #'                        behavior, but can make the execution of the combined
 #'                        function faster, as the later ones are often evaluated
-#'                        only if the criteria for the earlier ones is met.
+#'                        only if the criteria for the earlier ones are met.
 #'
 #' @return A function that returns the minimum of all halting test values;
 #'         the threshold value supplied to it is recycled for the individual
@@ -381,12 +397,14 @@ create_halting_test <- function(halting_tests) {
 
 #' Returns smallest halting_test-threshold ratio, or 0 if less than 1.
 #'
-#' @param crit        The criterion function to use, such as \code{\link{t_crit}}.
+#' @param crit        The criterion function to use, such as \code{\link{.t_crit}}.
 #'
 #' @inheritParams match_groups
 #'
 #' @return The ratio of the p-value and the threshold, or 0 if the p-value is
 #'         less than the threshold.
+#'
+#' @keywords internal
 .apply_crit <- function(covariates, crit, condition, thresh) {
     min_p <- Inf
     condition <- droplevels(condition)
@@ -423,6 +441,8 @@ create_halting_test <- function(halting_tests) {
 #'         less than the threshold.
 #'
 #' @importFrom utils combn
+#'
+#' @keywords internal
 .apply_crit_to_condition_pairs <-
     function(covariates, crit, condition, thresh) {
         condition <- droplevels(condition)

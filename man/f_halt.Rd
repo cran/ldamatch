@@ -22,4 +22,3 @@ The ratio of the p-value and the threshold, or 0 if the p-value is
 \description{
 A univariate halting test using Fisher's exact test.
 }
-

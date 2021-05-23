@@ -1,23 +1,59 @@
-#' Returns the subjects whose inclusion status changed in the highest number of
-#' cases.
+#' Chooses best one(s) of a set of subjects having the best p-value(s).
 #'
-#' @param best_sets   A list of logical vectors showing which subjects stay in.
-#'                    (E.g., the return value from .choose_best_subjects().)
+#' Used as first parameter of .search_heuristic_with_lookahead.
+#' It chooses subject(s) for removal: the most frequently removed one(s);
+#' among those, it prefers the one with the lowest p-value,
+#' then chooses randomly among the remaining ones.
 #'
-#' @param is.in       A logical vector showing which items are preserved
-#'                    currently; versions resulting by changing indices for
-#'                    each candidate are then compared.
+#' @return The table of counts for the chosen indices within is.in.
 #'
-#' @return A list of subject indices corresponding to is.in.
-.get_most_frequently_excluded_subjects <-
-    function(best_sets, is.in) {
-        excluded_subject_counts <- table(unlist(lapply(
-            best_sets, .get_difference_inds, is.in
-        )))
-        best_subjects <-
-            as.integer(names(excluded_subject_counts)[excluded_subject_counts == max(excluded_subject_counts)])
-        best_subjects
+#' @importFrom utils combn
+#'
+#' @keywords internal
+.choose_most_frequently_chosen_subject_from_subject_tuples <-
+    function(is.in,
+             best_sets,
+             look,
+             condition,
+             covariates,
+             halting_test,
+             thresh,
+             tiebreaker,
+             props,
+             prefer_test,
+             max_removed_per_cond,
+             max_removed_in_next_step,
+             ratio_for_slowdown,
+             remove_best_only,
+             print_info) {
+        best_subject_counts <- table(unlist(best_sets))
+        if (length(best_subject_counts) > max_removed_in_next_step)
+            best_subject_counts <-
+                best_subject_counts[best_subject_counts == max(best_subject_counts)]
+        if (length(best_subject_counts) > max_removed_in_next_step &&
+            look > 1) {
+            best_subject_counts <- table(unlist(
+                .choose_best_subjects(
+                    as.integer(names(best_subject_counts)),
+                    is.in,
+                    condition,
+                    covariates,
+                    halting_test,
+                    thresh,
+                    tiebreaker,
+                    props,
+                    prefer_test,
+                    max_removed_per_cond,
+                    max_removed_in_next_step,
+                    ratio_for_slowdown,
+                    remove_best_only)))
+            if (length(best_subject_counts) > max_removed_in_next_step)
+                best_subject_counts <-
+                    best_subject_counts[best_subject_counts == max(best_subject_counts)]
+        }
+        best_subject_counts
     }
+
 
 #' Finds matching using depth-first search, looking ahead n steps.
 #'
@@ -33,7 +69,7 @@
 #' see a message about "Random choices" if the algorithm needed to make such
 #' random decisions.
 #'
-#' @param max_removed   The maximum number of subjects that can be removed from
+#' @param max_removed_per_cond   The maximum number of subjects that can be removed from
 #'                      each group. It must have a valid number for each group.
 #'
 #' @inheritParams match_groups
@@ -41,127 +77,39 @@
 #'
 #' @return All results found by search method in a list. It raises a
 #'         "Convergence failure" error if it cannot find a matched set.
-#'
-#' @import foreach
-#' @importFrom iterpc iterpc iter_wrapper
 search_heuristic4 <- function(condition,
                               covariates,
                               halting_test,
                               thresh,
                               props,
-                              max_removed,
+                              max_removed_per_cond,
                               tiebreaker = NULL,
-                              min_preserved = NULL,
-                              lookahead = NULL,
+                              min_preserved = length(levels(condition)),
+                              lookahead = 2,
+                              prefer_test = TRUE,
                               print_info = TRUE,
+                              max_removed_per_step = 1,
+                              max_removed_percent_per_step = 0.5,
+                              ratio_for_slowdown = 0.5,
+                              given_args = NULL,
                               ...) {
-    .warn_about_extra_params(...)
-    if (is.null(lookahead))
-        lookahead <- 2
-    else
-        stopifnot(lookahead >= 1)
-    if (is.null(min_preserved))
-        min_preserved <- length(levels(condition))
-    is.in <- rep(TRUE, length(condition))
-    look <-
-        1  # level we are looking at (the number of subjects dropped)
-    random_choices <- list()
-    step <- 0
-    while (sum(is.in) > min_preserved) {
-        if (print_info)
-            cat(sprintf("Number of subjects: %d\n", sum(is.in)))
-        can_be_removed <-
-            condition %in% names(which(max_removed > 0))
-        repeat {
-            if (print_info)
-                cat("Lookahead", look)
-            is.in_candidates <- is.in & can_be_removed
-            candidates <- iterpc::iter_wrapper(iterpc::iterpc(
-                sum(is.in_candidates),
-                look,
-                which(is.in_candidates)
-            ))
-            best_sets <- .choose_best_subjects(
-                candidates,
-                is.in,
-                condition,
-                covariates,
-                halting_test,
-                thresh,
-                tiebreaker,
-                props
-            )
-            if (length(best_sets) == 0)
-                stop("Convergence failure")
-            if (halting_test(condition[best_sets[[1]]],
-                             covariates[best_sets[[1]], , drop = FALSE], thresh)) {
-                if (print_info) {
-                    cat(
-                        sprintf(
-                            "\nFound solution at %d: %s\n",
-                            look,
-                            .vector_list_to_string(
-                                lapply(best_sets, .get_difference_inds, is.in)
-                            )
-                        )
-                    )
-                    if (length(random_choices) > 0)
-                        cat(
-                            "Random choices:",
-                            .vector_list_to_string(random_choices, " "),
-                            "\n"
-                        )
-                }
-                return(best_sets)  # returns list of best results
-            }
-            if (print_info)
-                cat(", best sets:",
-                    .vector_list_to_string(lapply(
-                        best_sets, .get_difference_inds, is.in
-                    )),
-                    "\n")
-            if (look >= lookahead)
-                break
-            look <- look + 1
-        }
-        # choose one subject for removal that was among the most frequently
-        # removed ones; among those, prefer the one with the lowest p-value,
-        # then choose randomly among the remaining ones
-        inc(step) <- 1
-        best_subjects <-
-            .get_most_frequently_excluded_subjects(best_sets, is.in)
-        if (length(best_subjects) > 1)
-            best_subjects <- .get_most_frequently_excluded_subjects(
-                .choose_best_subjects(
-                    best_subjects,
-                    is.in,
-                    condition,
-                    covariates,
-                    halting_test,
-                    thresh,
-                    tiebreaker,
-                    props
-                ),
-                is.in
-            )
-        if (length(best_subjects) > 1) {
-            chosen_ind <- sample(best_subjects, 1)
-            random_choices <- c(random_choices, list(
-                list(
-                    step = step,
-                    num_choices = length(best_subjects),
-                    chosen_ind = chosen_ind
-                )
-            ))
-        } else {
-            chosen_ind <- best_subjects
-        }
-        is.in <- .flip_ind(is.in, chosen_ind)
-        dec(max_removed[condition[chosen_ind]]) <- 1
-    }
-    if (print_info && length(random_choices) > 0)
-        cat("Random choices:",
-            .vector_list_to_string(random_choices, "; "),
-            "\n")
-    stop("Convergence failure")
+    .search_heuristic_with_lookahead(
+        choose_from_subject_tuples = .choose_most_frequently_chosen_subject_from_subject_tuples,
+        condition = condition,
+        covariates = covariates,
+        halting_test = halting_test,
+        thresh = thresh,
+        props = props,
+        max_removed_per_cond = max_removed_per_cond,
+        tiebreaker = tiebreaker,
+        min_preserved = min_preserved,
+        lookahead = lookahead,
+        prefer_test = prefer_test,
+        print_info = print_info,
+        max_removed_per_step = max_removed_per_step,
+        max_removed_percent_per_step = max_removed_percent_per_step,
+        ratio_for_slowdown = ratio_for_slowdown,
+        given_args = given_args,
+        ...
+    )
 }
