@@ -5,19 +5,16 @@
 #' including a heuristic based on linear discriminant analysis,
 #' multiple heuristics based on the test statistic,
 #' and parallelized exhaustive search.
-#' See the help help for function \code{\link{match_groups}}.
-#'
-#' @docType package
-#' @name ldamatch
-NULL
-
+#' See the help for function \code{\link{match_groups}}.
+#' @keywords internal
+"_PACKAGE"
 
 ## Actual matching procedure.
 
 #' Normalizes the props parameter for match_groups().
 #'
 #' @inheritParams match_groups
-#' @param keep_all_items  If TRUE and props is a character vector, last item is not dropped.
+#' @param keep_last_item  If TRUE and props is a character vector, last item is not dropped.
 #'
 #' @return A named vector: if props contains proportions, it is the same, but
 #' ordered to follow the levels of condition; if props contains names of
@@ -109,9 +106,9 @@ NULL
 
 #' The available methods for matching.
 #' @export
-matching_methods = c("heuristic2",
+matching_methods = c("heuristic4",
                      "heuristic3",
-                     "heuristic4",
+                     "heuristic2",
                      "random",
                      "exhaustive")
 
@@ -278,7 +275,7 @@ match_groups <-
         search_method <-
             try(get(paste0("search_", method), mode = "function"),
                 silent = TRUE)
-        if (class(search_method) == "try-error")
+        if (inherits(search_method, "try-error"))
             stop("Search method ", method, " is not available")
         if (print_info)
             cat("Search method: ", method, "\n")

@@ -19,19 +19,19 @@ Sets value for ldamatch global parameter.
 }
 \details{
 The names of the available parameters:
-\itemize{
-  \item{RND_DEFAULT_REPLICATES}{: random search: default number of replicates}
+\describe{
+  \item{RND_DEFAULT_REPLICATES}{random search: default number of replicates}
   \item{Anderson-Darling test parameters; see kSamples::ad.test for explanation}{
-    \itemize{
-      \item{AD_METHOD}{: the method parameter for ad.test; default: asymptotic}
-      \item{AD_NSIM}{: the Nsim parameter for ad.test, used when AD_METHOD is 'simulated'; default: 10000}
-      \item{AD_VERSION}{: 1 or 2 for the two versions of the test statistic; default: 1}
+    \describe{
+      \item{AD_METHOD}{the method parameter for ad.test; default: asymptotic}
+      \item{AD_NSIM}{the Nsim parameter for ad.test, used when AD_METHOD is 'simulated'; default: 10000}
+      \item{AD_VERSION}{1 or 2 for the two versions of the test statistic; default: 1}
     }
   }
-  \item{PRINT_INFO}{: print summary information, and progress information for
+  \item{PRINT_INFO}{print summary information, and progress information for
     the exhaustive search algorithm}
-  \item{PRINT_PROGRESS}{: whether to print progress information about parallell processing of cases}
-  \item{PROCESSED_CHUNK_SIZE}{: the number of cases to be retrieved at a time from iterators for parallel processing}
+  \item{PRINT_PROGRESS}{whether to print progress information about parallel processing of cases}
+  \item{PROCESSED_CHUNK_SIZE}{the number of cases to be retrieved at a time from iterators for parallel processing}
 }
 }
 \seealso{

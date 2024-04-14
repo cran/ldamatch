@@ -25,7 +25,7 @@ it results in losing more subjects from C.}
 
 \item{condition}{A factor vector containing condition labels.}
 
-\item{keep_all_items}{If TRUE and props is a character vector, last item is not dropped.}
+\item{keep_last_item}{If TRUE and props is a character vector, last item is not dropped.}
 }
 \value{
 A named vector: if props contains proportions, it is the same, but

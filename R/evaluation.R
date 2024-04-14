@@ -177,7 +177,7 @@ calc_metrics <- function(is.in,
                          halting_test,
                          props = prop.table(table(condition)),
                          tiebreaker = NULL) {
-    if (class(is.in) == "try-error") {
+    if (inherits(is.in, "try-error")) {
         return(
             list(
                 all.is.in = list(),

@@ -410,7 +410,7 @@ create_halting_test <- function(halting_tests) {
     condition <- droplevels(condition)
     for (i in seq_len(ncol(covariates))) {
         p <- try(crit(covariates[, i], condition), silent = TRUE)
-        if (class(p) == "try-error") {
+        if (inherits(p, "try-error")) {
             n_levels = length(levels(condition))
             if (n_levels == 1 || grepl("not enough.*observations", p)) {
                 return(0.0)  # problem is too few observations

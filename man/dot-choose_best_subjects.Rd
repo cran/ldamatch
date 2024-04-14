@@ -85,54 +85,12 @@ are corrected without a warning.}
 it starts removing subjects one by one.
 Used when max_removed_per_step > 1,
 with a default value of 0.5.}
-
-\item{best}{list(counts, lsets = list(list(metric, sets)))}
-
-\item{candidate}{list(metric, set)}
 }
 \value{
 list(inds): A list containing the best index vectors indicating the
 positions to flip in is.in.
-
-list(counts, lsets = list(list(metric, sets)))
 }
 \description{
 Chooses best set of subjects in a set.
 }
-\keyword{.choose_best_subjects}
-\keyword{Calculates}
-\keyword{Combines}
-\keyword{Included}
-\keyword{allowed}
-\keyword{are}
-\keyword{as}
-\keyword{available}
-\keyword{body}
-\keyword{candidate}
-\keyword{closures}
-\keyword{condition}
-\keyword{counts}
-\keyword{enough}
-\keyword{exceed}
-\keyword{function}
-\keyword{having}
-\keyword{instead}
 \keyword{internal}
-\keyword{its}
-\keyword{just}
-\keyword{keeping}
-\keyword{limits.}
-\keyword{lists}
-\keyword{make}
-\keyword{maximum}
-\keyword{of}
-\keyword{parameters}
-\keyword{parameters.}
-\keyword{pass}
-\keyword{per}
-\keyword{that}
-\keyword{the}
-\keyword{them}
-\keyword{to}
-\keyword{values.}
-\keyword{within}

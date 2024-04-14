@@ -120,7 +120,7 @@ search_heuristic2 <- function(condition,
             tiebreaker
         ),
         silent = TRUE)
-        if (class(lis.in.for_subset) != "try-error") {
+        if (inherits(lis.in.for_subset, "try-error")) {
             is.in <- logical(length(condition))
             is.in[-ind] <- lis.in.for_subset[[1]]
             is.in[[ind]] <- FALSE

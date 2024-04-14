@@ -2,6 +2,8 @@
 library(ldamatch)
 set.seed(257)
 
+default_method = "heuristic4"
+
 SIZE <- 15
 condition <- as.factor(c(rep("control", 2 * SIZE), rep("treatment", SIZE)))
 covariate1 <- c(rnorm(2 * SIZE), rnorm(SIZE, 1, 2))
@@ -11,7 +13,7 @@ is.in <- match_groups(condition, covariate1, t_halt, method = "random")
 print(table(condition, is.in))
 
 ## -----------------------------------------------------------------------------
-is.in <- match_groups(condition, covariate1, t_halt, method = "heuristic2")
+is.in <- match_groups(condition, covariate1, t_halt, method = default_method)
 print(table(condition, is.in))
 
 ## -----------------------------------------------------------------------------
@@ -19,7 +21,7 @@ covariate2 <- c(rnorm(2 * SIZE), rnorm(SIZE, 1, 2))
 covariates <- cbind(covariate1, covariate2)
 
 ## -----------------------------------------------------------------------------
-is.in <- match_groups(condition, covariates, t_halt, method = "heuristic2")
+is.in <- match_groups(condition, covariates, t_halt, method = default_method)
 print(table(condition, is.in))
 
 ## -----------------------------------------------------------------------------
@@ -40,7 +42,7 @@ is.in <- match_groups(condition, covariates, wilks_halt, method = "random")
 print(table(condition, is.in))
 
 ## -----------------------------------------------------------------------------
-is.in <- match_groups(condition, covariates, ad_halt, method = "heuristic2", prefer_test = TRUE)
+is.in <- match_groups(condition, covariates, ad_halt, method = default_method, prefer_test = TRUE)
 print(table(condition, is.in))
 
 ## -----------------------------------------------------------------------------
@@ -56,9 +58,9 @@ is.ins <- match_groups(condition, covariate1, t_halt, method = "exhaustive", all
 print(table(condition, is.ins[[1]]))
 print(length(is.ins))
 
-# (Confirm exhaustive search by applying heuristic2 search to it.)
+# (Confirm exhaustive search by applying default search method to it.)
 is.in <- match_groups(condition[is.ins[[1]]], covariate1[is.ins[[1]]], t_halt,
-                      method = "heuristic2")
+                      method = default_method)
 print(table(condition[is.ins[[1]]], is.in))
 
 ## -----------------------------------------------------------------------------
@@ -71,6 +73,6 @@ covariate2 <- c(rnorm(SIZE, 0, 1), rnorm(SIZE, 0, 2), rnorm(SIZE, 1, 2))
 covariates <- cbind(covariate1, covariate2)
 
 ## -----------------------------------------------------------------------------
-is.in <- match_groups(condition, covariates, t_ad_halt, method = "heuristic2")
+is.in <- match_groups(condition, covariates, t_ad_halt, method = default_method)
 print(table(condition, is.in))
 

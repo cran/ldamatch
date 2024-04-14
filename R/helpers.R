@@ -33,7 +33,7 @@
                                  silent = TRUE) {
     ratio <-
         try(-halting_test(condition, covariates, -thresh), silent = silent)
-    if (class(ratio) == "try-error")
+    if (inherits(ratio, "try-error"))
         ratio <- NA
     ratio
 }
@@ -244,7 +244,7 @@ calc_p_value <- function(condition, covariates, halting_test) {
     } else if ('iter' %in% class(input)) {
         get_next <- function(input) {
             value <- try(iterators::nextElem(input), silent = TRUE)
-            if (class(value) == 'try-error')
+            if (inherits(value, "try-error"))
                 NULL
             else
                 value
@@ -329,26 +329,21 @@ calc_p_value <- function(condition, covariates, halting_test) {
                                   remove_best_only) {
     inds_as_chars <- as.character(seq_along(condition))
 
-    #' Calculates counts per condition that are within allowed limits.
-    #'
-    #' @keywords internal
+    # Calculates counts per condition that are within allowed limits.
     .relevant_count <- function(counts) {
         sum(pmin(max_removed_per_cond, table(condition[as.integer(names(counts)[counts > 0])])))
     }
 
-    #' Combines candidate lists keeping just enough to exceed maximum values.
-    #'
-    #' Included within the function body to make parameters of
-    #' .choose_best_subjects available as closures instead of having to pass
-    #' them as its parameters.
-    #'
-    #' @param best       list(counts, lsets = list(list(metric, sets)))
-    #' @param candidate  list(metric, set)
-    #'
-    #' @return list(counts, lsets = list(list(metric, sets)))
-    #'
-    #'
-    #' @keywords internal
+    # Combines candidate lists keeping just enough to exceed maximum values.
+    #
+    # Included within the function body to make parameters of
+    # .choose_best_subjects available as closures instead of having to pass
+    # them as its parameters.
+    #
+    # @param best       list(counts, lsets = list(list(metric, sets)))
+    # @param candidate  list(metric, set)
+    #
+    # @return list(counts, lsets = list(list(metric, sets)))
     .combine_enough_sets <- function(best, candidate) {
         candidate_stored <- FALSE
         lsets_index <- 1
